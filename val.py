@@ -79,18 +79,18 @@ def summarize_performance(cocoEval):
         return mean_s
         
     stats = np.zeros((12,))
-    stats[0] = _summarize(1)
-    stats[1] = _summarize(1, iouThr=.5, maxDets=cocoEval.params.maxDets[2])
-    stats[2] = _summarize(1, iouThr=.75, maxDets=cocoEval.params.maxDets[2])
-    stats[3] = _summarize(1, areaRng='small', maxDets=cocoEval.params.maxDets[2])
-    stats[4] = _summarize(1, areaRng='medium', maxDets=cocoEval.params.maxDets[2])
-    stats[5] = _summarize(1, areaRng='large', maxDets=cocoEval.params.maxDets[2])
-    stats[6] = _summarize(0, maxDets=cocoEval.params.maxDets[0])
-    stats[7] = _summarize(0, maxDets=cocoEval.params.maxDets[1])
-    stats[8] = _summarize(0, maxDets=cocoEval.params.maxDets[2])
-    stats[9] = _summarize(0, areaRng='small', maxDets=cocoEval.params.maxDets[2])
-    stats[10] = _summarize(0, areaRng='medium', maxDets=cocoEval.params.maxDets[2])
-    stats[11] = _summarize(0, areaRng='large', maxDets=cocoEval.params.maxDets[2])
+    stats[0] = _summarize(1)                                                                # Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ]
+    stats[1] = _summarize(1, iouThr=.5, maxDets=cocoEval.params.maxDets[2])                 # Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ]
+    stats[2] = _summarize(1, iouThr=.75, maxDets=cocoEval.params.maxDets[2])                # Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ]
+    stats[3] = _summarize(1, areaRng='small', maxDets=cocoEval.params.maxDets[2])           # Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ]
+    stats[4] = _summarize(1, areaRng='medium', maxDets=cocoEval.params.maxDets[2])          # Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ]
+    stats[5] = _summarize(1, areaRng='large', maxDets=cocoEval.params.maxDets[2])           # Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ]
+    stats[6] = _summarize(0, maxDets=cocoEval.params.maxDets[0])                            # Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ]
+    stats[7] = _summarize(0, maxDets=cocoEval.params.maxDets[1])                            # Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ]
+    stats[8] = _summarize(0, maxDets=cocoEval.params.maxDets[2])                            # Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ]
+    stats[9] = _summarize(0, areaRng='small', maxDets=cocoEval.params.maxDets[2])           # Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ]
+    stats[10] = _summarize(0, areaRng='medium', maxDets=cocoEval.params.maxDets[2])         # Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ]
+    stats[11] = _summarize(0, areaRng='large', maxDets=cocoEval.params.maxDets[2])          # Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ]
     return stats
 
 
