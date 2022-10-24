@@ -120,8 +120,8 @@ if __name__ == "__main__":
     model.load_state_dict(checkpoint, strict=True)
 
     class_list = val_dataset.class_list
-    color_list = generate_random_color(num_classes)
     num_classes = len(class_list)
+    color_list = generate_random_color(num_classes)
 
     mAP_file_path = val_dataset.mAP_file_path
     cocoGt = COCO(annotation_file=mAP_file_path)

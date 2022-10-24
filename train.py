@@ -56,9 +56,9 @@ if __name__ == "__main__":
     val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=batch_size, shuffle=False, pin_memory=True)
     
     class_list = train_dataset.class_list
-    color_list = generate_random_color(num_classes)
     num_classes = len(class_list)
-    
+    color_list = generate_random_color(num_classes)
+
     mAP_file_path = val_dataset.mAP_file_path
     cocoGt = COCO(annotation_file=mAP_file_path)
 
