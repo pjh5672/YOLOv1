@@ -1,4 +1,4 @@
-# <div align="center">YOLOv1</div>
+# <div align="center">YOLO v1</div>
 
 ---
 
