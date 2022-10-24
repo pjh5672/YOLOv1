@@ -7,6 +7,7 @@ import cv2
 import yaml
 import torch
 import numpy as np
+from tqdm import tqdm
 
 from transform import *
 
@@ -107,7 +108,7 @@ class Dataset:
             cocoAPI_formatter["categories"] = []
 
             lbl_id = 0
-            for i in range(len(self)):
+            for i in tqdm(range(len(self))):
                 filename, image, label = self.get_GT_item(i)
                 img_h, img_w = image.shape[:2]
                 cocoAPI_formatter["imageToid"][filename] = i

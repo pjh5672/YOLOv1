@@ -1,4 +1,4 @@
-PATH: d:/PASCAL-VOC/
+PATH: d:/DATASET/PASCAL-VOC/
 
 TRAIN: 
  - images/train2007
@@ -8,7 +8,7 @@ TRAIN:
 VAL: 
  - images/test2007
 
-mAP_FILE: ./evals/voc_val.json
+MAP_FILE_NAME: voc_val.json
 
 CLASS_INFO: {
   0: 'aeroplane',

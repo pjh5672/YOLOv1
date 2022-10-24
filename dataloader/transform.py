@@ -37,12 +37,12 @@ class AugmentTransform:
     def __init__(self, input_size):
         self.input_size = input_size
         self.flip = Albumentations(p_flipud=0.0, p_fliplr=0.5)
-        self.gain_h = 0.01
-        self.gain_s = 0.1
-        self.gain_v = 0.05
+        self.gain_h = 0.015
+        self.gain_s = 0.6
+        self.gain_v = 0.3
         self.degrees = 5
-        self.translate = 0.0
-        self.scale = 0.05
+        self.translate = 0.2
+        self.scale = 0.5
         self.perspective = 0.0
     
 

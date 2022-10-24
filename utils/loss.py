@@ -55,21 +55,22 @@ class YoloLoss():
 
     def build_target(self, label):
         target = torch.zeros(size=(self.grid_size, self.grid_size, self.num_attributes), dtype=torch.float32)
-        cls_id = label[:, 0].long()
-
-        if -1 in cls_id:
+        
+        if -1 in label[:, 0]:
             return target
         else:
-            gt_box = label[:, 1:5] * self.grid_size
-            grid_i = gt_box[:, 0].long()
-            grid_j = gt_box[:, 1].long()
-            tx = gt_box[:, 0] - grid_i
-            ty = gt_box[:, 1] - grid_j
-            tw = gt_box[:, 2]
-            th = gt_box[:, 3]
-            target[grid_j, grid_i, 0] = 1.0
-            target[grid_j, grid_i, 1:5] = torch.Tensor([tx,ty,tw,th])
-            target[grid_j, grid_i, 5 + cls_id] = 1.0
+            for item in label:
+                cls_id = item[0].long()
+                gt_box = item[1:5] * self.grid_size
+                grid_i = gt_box[0].long()
+                grid_j = gt_box[1].long()
+                tx = gt_box[0] - grid_i
+                ty = gt_box[1] - grid_j
+                tw = gt_box[2]
+                th = gt_box[3]
+                target[grid_j, grid_i, 0] = 1.0
+                target[grid_j, grid_i, 1:5] = torch.Tensor([tx,ty,tw,th])
+                target[grid_j, grid_i, 5 + cls_id] = 1.0
             return target
     
     

@@ -1,11 +1,11 @@
-PATH: d:/MS-COCO/coco2017
+PATH: d:/DATASET/MS-COCO/coco2017
 
 TRAIN: 
  - images/train
 VAL: 
  - images/val
 
-mAP_FILE: ./evals/coco2017_val.json
+MAP_FILE_NAME: coco2017_val.json
 
 CLASS_INFO: {
   0: 'person',
