@@ -53,7 +53,6 @@ def visualize_target(image, label, class_list, color_list):
 
 
 def visualize_prediction(image, prediction, class_list, color_list):
-    prediction[:, 1:5] = transform_xcycwh_to_x1y1x2y2(prediction[:, 1:5], clip_max=224)
     if len(prediction) > 0:
         image = visualize(image, prediction, class_list, color_list, show_class=True, show_score=True)
     return image[...,::-1]

@@ -5,111 +5,111 @@ from torch import nn
 
 
 class YoloLoss():
-    def __init__(self, num_classes, device, lambda_coord=5., lambda_noobj=0.5):
-        self.num_classes = num_classes
+    def __init__(self, input_size, num_classes, device, lambda_coord=5.0, lambda_noobj=0.5):
+        self.stride = 32
         self.device = device
-        self.grid_size = 7
         self.lambda_coord = lambda_coord
         self.lambda_noobj = lambda_noobj
+        self.num_attributes = (1 + 4) + num_classes
         self.mse_loss = nn.MSELoss(reduction="sum")
+        self.set_grid(input_size)
 
 
-    def __call__(self, predictions, targets):
-        self.batch_size, _, _, _ = predictions.shape
-        groundtruths = self.build_batch_target_grid(targets)
-        groundtruths = groundtruths.to(self.device)
-        
+    def __call__(self, predictions, labels):
+        self.batch_size = predictions.shape[0]
+        targets = self.build_batch_target(labels).to(self.device)
+
         with torch.no_grad():
-            iou1 = self.get_IoU(predictions[:, 1:5, ...], groundtruths[:, 1:5, ...])
-            iou2 = self.get_IoU(predictions[:, 6:10, ...], groundtruths[:, 1:5, ...])
+            iou1 = self.calculate_iou(pred_box_cxcywh=predictions[:, :self.grid_size * self.grid_size, 1:5], target_box_cxcywh=targets[..., 1:5])
+            iou2 = self.calculate_iou(pred_box_cxcywh=predictions[:, self.grid_size * self.grid_size:, 1:5], target_box_cxcywh=targets[..., 1:5])
+            best_box = torch.stack((iou1, iou2), dim=-1).max(dim=-1).indices
+            best_box = torch.cat((best_box.eq(0), best_box.eq(1)), dim=-1)
+            ious = torch.cat((iou1, iou2), dim=-1)
+            
+        positive_mask = (targets[..., 0].tile(1,2) * best_box).bool()
+        pred_obj = (predictions[..., 0])[positive_mask]
+        pred_noobj = predictions[..., 0][~positive_mask]
+        pred_box_txty = predictions[..., 1:3][positive_mask]
+        pred_box_twth = predictions[..., 3:5][positive_mask]
+        pred_cls = predictions[..., 5:][positive_mask]
 
-        ious = torch.stack([iou1, iou2], dim=1)
-        max_iou, best_box = ious.max(dim=1, keepdim=True)
-        max_iou = torch.cat([max_iou, max_iou], dim=1)
-        best_box = torch.cat([best_box.eq(0), best_box.eq(1)], dim=1)
+        true_mask = targets[..., 0].bool()
+        target_obj = targets[..., 0][true_mask]
+        target_box_txty = targets[..., 1:3][true_mask]
+        target_box_twth = targets[..., 3:5][true_mask]
+        target_cls = targets[..., 5:][true_mask]
 
-        predictions_ = predictions[:, :5*2, ...].reshape(self.batch_size, 2, 5, self.grid_size, self.grid_size)
-        obj_pred = predictions_[:, :, 0, ...]
-        xy_pred = predictions_[:, :, 1:3, ...]
-        wh_pred = predictions_[:, :, 3:5, ...]
-        cls_pred = predictions[:, 5*2:, ...]
-
-        groundtruths_ = groundtruths[:, :5, ...].reshape(self.batch_size, 1, 5, self.grid_size, self.grid_size)
-        obj_target = groundtruths_[:, :, 0, ...]
-        xy_target = groundtruths_[:, :, 1:3, ...]
-        wh_target= groundtruths_[:, :, 3:5, ...]
-        cls_target = groundtruths[:, 5:, ...]
-        positive = obj_target * best_box
-
-        obj_loss = self.mse_loss((obj_pred * ious)[positive.bool()], positive[positive.bool()])
-        noobj_loss = self.mse_loss(obj_pred[~positive.bool()], obj_pred[~positive.bool()]*0)
-        xy_loss = self.mse_loss(positive.unsqueeze(dim=2) * xy_pred, positive.unsqueeze(dim=2) * xy_target)
-        wh_loss = self.mse_loss(positive.unsqueeze(dim=2) * (wh_pred.sign() * (wh_pred.abs() + 1e-8).sqrt()),
-                                positive.unsqueeze(dim=2) * (wh_target + 1e-8).sqrt())
-        cls_loss = self.mse_loss(cls_pred[obj_target.bool()], cls_target[obj_target.bool()])
+        obj_loss = self.mse_loss(pred_obj, target_obj)
+        noobj_loss = self.mse_loss(pred_noobj, pred_noobj * 0)
+        txty_loss = self.mse_loss(pred_box_txty, target_box_txty)
+        twth_loss = self.mse_loss(pred_box_twth.sign() * (pred_box_twth.abs() + 1e-8).sqrt(), (target_box_twth + 1e-8).sqrt())
+        cls_loss = self.mse_loss(pred_cls, target_cls)
         
         obj_loss /= self.batch_size
         noobj_loss /= self.batch_size
-        bbox_loss = (xy_loss+wh_loss) / self.batch_size
+        box_loss = (txty_loss + twth_loss) / self.batch_size
         cls_loss /= self.batch_size
-        
-        total_loss = obj_loss + self.lambda_noobj*noobj_loss + self.lambda_coord*bbox_loss + cls_loss
-        return total_loss, (obj_loss, noobj_loss, bbox_loss, cls_loss)
-    
-    
-    def build_target_grid(self, target):
-        target_grid = torch.zeros((1+4+self.num_classes, self.grid_size, self.grid_size), device=self.device)
+        multipart_loss = obj_loss + self.lambda_noobj * noobj_loss + self.lambda_coord * box_loss + cls_loss
+        return multipart_loss, (obj_loss, noobj_loss, box_loss, cls_loss)
 
-        for gt in target:
-            cls_id, xc, yc, w, h = gt
 
-            if cls_id == -1:
-                return target_grid
-            
-            cls_id = int(cls_id)
-            i_grid = int(xc * self.grid_size)
-            j_grid = int(yc * self.grid_size)
-            xn = (xc * self.grid_size) - i_grid
-            yn = (yc * self.grid_size) - j_grid
-            w *= self.grid_size
-            h *= self.grid_size
-            target_grid[0, j_grid, i_grid] = 1
-            target_grid[1:5, j_grid, i_grid] = torch.Tensor([xn,yn,w,h])
-            target_grid[5+cls_id, j_grid, i_grid] = 1
-        return target_grid
-    
-    
-    def build_batch_target_grid(self, targets):
-        target_grid_batch = torch.stack([self.build_target_grid(target) for target in targets], dim=0)
-        return target_grid_batch
-    
-    
-    def get_IoU(self, cbox1, cbox2):
-        box1 = self.xywh_to_xyxy(cbox1)
-        box2 = self.xywh_to_xyxy(cbox2)
-        x1 = torch.max(box1[:, 0, ...], box2[:, 0, ...])
-        y1 = torch.max(box1[:, 1, ...], box2[:, 1, ...])
-        x2 = torch.min(box1[:, 2, ...], box2[:, 2, ...])
-        y2 = torch.min(box1[:, 3, ...], box2[:, 3, ...])
+    def build_target(self, label):
+        target = torch.zeros(size=(self.grid_size, self.grid_size, self.num_attributes), dtype=torch.float32)
+        cls_id = label[:, 0].long()
 
-        intersection = (x2-x1).clamp(min=0) * (y2-y1).clamp(min=0)
-        union = abs(cbox1[:, 2, ...]*cbox1[:, 3, ...]) + abs(cbox2[:, 2, ...]*cbox2[:, 3, ...]) - intersection
-        intersection[intersection.gt(0)] = intersection[intersection.gt(0)] / union[intersection.gt(0)]
-        return intersection
+        if -1 in cls_id:
+            return target
+        else:
+            gt_box = label[:, 1:5] * self.grid_size
+            grid_i = gt_box[:, 0].long()
+            grid_j = gt_box[:, 1].long()
+            tx = gt_box[:, 0] - grid_i
+            ty = gt_box[:, 1] - grid_j
+            tw = gt_box[:, 2]
+            th = gt_box[:, 3]
+            target[grid_j, grid_i, 0] = 1.0
+            target[grid_j, grid_i, 1:5] = torch.Tensor([tx,ty,tw,th])
+            target[grid_j, grid_i, 5 + cls_id] = 1.0
+            return target
     
-    def generate_xy_normed_grid(self):
-        y_offset, x_offset = torch.meshgrid(torch.arange(self.grid_size), torch.arange(self.grid_size), indexing='ij')
-        xy_grid = torch.stack([x_offset, y_offset], dim=0)
-        xy_normed_grid = xy_grid / self.grid_size
-        return xy_normed_grid.to(self.device)
     
-    def xywh_to_xyxy(self, bboxes):
-        xy_normed_grid = self.generate_xy_normed_grid()
-        xcyc = bboxes[:,0:2,...] + xy_normed_grid.tile(self.batch_size, 1,1,1)
-        wh = bboxes[:,2:4,...]
-        x1y1 = xcyc - (wh/2)
-        x2y2 = xcyc + (wh/2)
-        return torch.cat([x1y1, x2y2], dim=1)
+    def build_batch_target(self, labels):
+        batch_target = torch.stack([self.build_target(label) for label in labels], dim=0)
+        return batch_target.view(self.batch_size, -1,  self.num_attributes)
+    
+    
+    def calculate_iou(self, pred_box_cxcywh, target_box_cxcywh):
+        pred_box_x1y1x2y2 = self.transform_cxcywh_to_x1y1x2y2(pred_box_cxcywh)
+        target_box_x1y1x2y2 = self.transform_cxcywh_to_x1y1x2y2(target_box_cxcywh)
+        target_box_x1y1x2y2[target_box_cxcywh.eq(0)] = 0.
+        x1 = torch.max(pred_box_x1y1x2y2[..., 0], target_box_x1y1x2y2[..., 0])
+        y1 = torch.max(pred_box_x1y1x2y2[..., 1], target_box_x1y1x2y2[..., 1])
+        x2 = torch.min(pred_box_x1y1x2y2[..., 2], target_box_x1y1x2y2[..., 2])
+        y2 = torch.min(pred_box_x1y1x2y2[..., 3], target_box_x1y1x2y2[..., 3])
+        inter = (x2 - x1).clamp(min=0) * (y2 - y1).clamp(min=0)
+        union = abs(pred_box_cxcywh[..., 2] * pred_box_cxcywh[..., 3]) + abs(target_box_cxcywh[..., 2] * target_box_cxcywh[..., 3]) - inter
+        inter[inter.gt(0)] = inter[inter.gt(0)] / union[inter.gt(0)]
+        return inter
+    
+
+    def set_grid(self, input_size):
+        self.input_size = input_size
+        self.grid_size = self.input_size // self.stride
+        grid_y, grid_x = torch.meshgrid((torch.arange(self.grid_size), torch.arange(self.grid_size)), indexing="ij")
+        self.grid_x = grid_x.contiguous().view((1, -1)).to(self.device)
+        self.grid_y = grid_y.contiguous().view((1, -1)).to(self.device)
+
+
+    def transform_cxcywh_to_x1y1x2y2(self, boxes):
+        xc = boxes[..., 0] + self.grid_x
+        yc = boxes[..., 1] + self.grid_y
+        w = boxes[..., 2]
+        h = boxes[..., 3]
+        x1 = xc - w/2
+        y1 = yc - h/2
+        x2 = xc + w/2
+        y2 = yc + h/2
+        return torch.stack((x1, y1, x2, y2), dim=-1)
 
 
 
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     if str(ROOT) not in sys.path:
         sys.path.append(str(ROOT))
 
-    from dataloader import Dataset
+    from dataloader import Dataset, BasicTransform
     from model import YoloModel
 
     yaml_path = ROOT / 'data' / 'toy.yaml'
@@ -135,26 +135,26 @@ if __name__ == "__main__":
     batch_size = 1
     device = torch.device('cpu')
 
-    train_dataset = Dataset(yaml_path=yaml_path, phase='train', input_size=input_size)
+    transformer = BasicTransform(input_size=input_size)
+    train_dataset = Dataset(yaml_path=yaml_path, phase='train')
+    train_dataset.load_transformer(transformer=transformer)
     train_loader = DataLoader(dataset=train_dataset, collate_fn=Dataset.collate_fn, batch_size=batch_size, shuffle=False, pin_memory=True, sampler=None)
+    
     model = YoloModel(input_size=input_size, num_classes=num_classes, device=device, num_boxes=2).to(device)
-    criterion = YoloLoss(num_classes=num_classes, device=device)
+    criterion = YoloLoss(input_size=input_size, num_classes=num_classes, device=device, lambda_coord=5.0, lambda_noobj=0.5)
     optimizer = optim.SGD(model.parameters(), lr=0.0001)
     optimizer.zero_grad()
 
-    for epoch in range(3):
-        print(f" ------------------------------------------- Epoch:{epoch:02d} ------------------------------------------- ")
+    for epoch in range(30):
+        model.train()
         for index, minibatch in enumerate(train_loader):
             filenames, images, labels, ori_img_sizes = minibatch
             predictions = model(images.to(device))
-            loss, items = criterion(predictions=predictions, targets=labels)
+            loss, items = criterion(predictions=predictions, labels=labels)
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
 
             if index % 50 == 0:
-                obj_loss, noobj_loss, bbox_loss, cls_loss = items
-                print(f"loss:{loss.item():4f}, obj:{obj_loss.item():.04f}, noobj:{noobj_loss.item():.04f}, bbox:{bbox_loss.item():.04f}, cls:{cls_loss.item():.04f}")
-
-            # if index == 0:
-            #     break
+                obj_loss, noobj_loss, box_loss, cls_loss = items
+                print(f"[Epoch:{epoch:02d}] loss:{loss.item():.4f}, obj:{obj_loss.item():.04f}, noobj:{noobj_loss.item():.04f}, box:{box_loss.item():.04f}, cls:{cls_loss.item():.04f}")

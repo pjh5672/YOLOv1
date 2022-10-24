@@ -19,22 +19,18 @@ from utils import clip_box_coordinate
 
 
 class Dataset:
-    def __init__(self, yaml_path, phase, **kwargs):
+    def __init__(self, yaml_path, phase):
         with open(yaml_path, mode="r") as f:
             data_item = yaml.load(f, Loader=yaml.FullLoader)
 
         self.phase = phase
-        self.input_size = kwargs["input_size"]
         self.class_list = data_item["CLASS_INFO"]
-
         self.image_paths = []
         for sub_dir in data_item[self.phase.upper()]:
             image_dir = Path(data_item["PATH"]) / sub_dir
             self.image_paths += [str(image_dir / fn) for fn in os.listdir(image_dir) if fn.lower().endswith(("png", "jpg", "jpeg"))]
-
         self.label_paths = self.replace_image2label_path(self.image_paths)
         self.generate_no_label(self.label_paths)
-        self.transformer = BasicTransform(input_size=self.input_size)
 
 
     def __len__(self): return len(self.image_paths)
@@ -48,7 +44,7 @@ class Dataset:
         ori_img_size = image.shape
         return filename, input_tensor, label, ori_img_size
 
-
+    
     def get_GT_item(self, index):
         filename, image = self.get_image(index)
         label = self.get_label(index)
@@ -87,6 +83,10 @@ class Dataset:
         return label
 
 
+    def load_transformer(self, transformer):
+        self.transformer = transformer
+
+
     @staticmethod
     def collate_fn(minibatch):
         filenames = []
@@ -109,8 +109,13 @@ if __name__ == "__main__":
     
     yaml_path = ROOT / 'data' / 'toy.yaml'
     input_size = 224
-    train_dataset = Dataset(yaml_path=yaml_path, phase='train', input_size=input_size)
-    val_dataset = Dataset(yaml_path=yaml_path, phase='val', input_size=input_size)
+    transformer = BasicTransform(input_size=input_size)
+    # transformer = AugmentTransform(input_size=input_size)
+    
+    train_dataset = Dataset(yaml_path=yaml_path, phase='train')
+    train_dataset.load_transformer(transformer=transformer)
+    val_dataset = Dataset(yaml_path=yaml_path, phase='val')
+    val_dataset.load_transformer(transformer=transformer)
 
     for index, minibatch in enumerate(train_dataset):
         filename, image, label, ori_img_size = train_dataset[index]
