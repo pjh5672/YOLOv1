@@ -19,6 +19,20 @@ def clip_box_coordinate(boxes):
     return boxes
 
 
+def transform_x1y1x2y2_to_x1y1wh(boxes):
+    x1y1 = boxes[:, :2]
+    wh = boxes[:, 2:] - boxes[:, :2]
+    x1y1wh = np.concatenate((x1y1, wh), axis=1)
+    return x1y1wh
+
+
+def transform_xcycwh_to_x1y1wh(boxes):
+    x1y1 = boxes[:, :2] - boxes[:, 2:] / 2
+    wh = boxes[:, 2:]
+    x1y1wh = np.concatenate((x1y1, wh), axis=1).clip(min=0)
+    return x1y1wh
+
+
 def transform_xcycwh_to_x1y1x2y2(boxes, clip_max=None):
     x1y1 = boxes[:, :2] - boxes[:, 2:] / 2
     x2y2 = boxes[:, :2] + boxes[:, 2:] / 2
@@ -39,7 +53,8 @@ def filter_confidence(prediction, conf_threshold=0.01):
     conf = prediction[:, 0][valid_index]
     box = prediction[:, 1:5][valid_index]
     cls_id = np.argmax(prediction[:, 5:][valid_index], axis=1)
-    return np.concatenate([cls_id[:, np.newaxis], box, conf[:, np.newaxis]], axis=-1)
+    prediction = np.concatenate([cls_id[:, np.newaxis], box, conf[:, np.newaxis]], axis=-1)
+    return prediction
 
 
 def hard_NMS(prediction, iou_threshold):

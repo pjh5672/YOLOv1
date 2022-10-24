@@ -27,19 +27,14 @@ def train(dataloader, model, criterion, optimizer, device):
 
 
 if __name__ == "__main__":
-    import os
-    import sys
     from pathlib import Path
 
     import torch
+    from utils import generate_random_color
+    from val import validate
 
     FILE = Path(__file__).resolve()
     ROOT = FILE.parents[0]
-    if str(ROOT) not in sys.path:
-        sys.path.append(str(ROOT))
-
-    from utils import generate_random_color
-    from val import validate
 
     global color_list, class_list, epoch
 

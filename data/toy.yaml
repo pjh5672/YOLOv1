@@ -5,6 +5,8 @@ TRAIN:
 VAL: 
  - images/train_2
 
+MAP_FILE_NAME: toy_dataset_val.json
+
 CLASS_INFO: {
   0: 'ship'
 }

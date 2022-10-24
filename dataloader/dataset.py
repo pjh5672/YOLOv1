@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 from pathlib import Path
 
 import cv2
@@ -14,7 +15,7 @@ ROOT = FILE.parents[1]
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from utils import clip_box_coordinate
+from utils import clip_box_coordinate, transform_xcycwh_to_x1y1wh
 
 
 
@@ -22,15 +23,18 @@ class Dataset:
     def __init__(self, yaml_path, phase):
         with open(yaml_path, mode="r") as f:
             data_item = yaml.load(f, Loader=yaml.FullLoader)
-
         self.phase = phase
         self.class_list = data_item["CLASS_INFO"]
+
         self.image_paths = []
         for sub_dir in data_item[self.phase.upper()]:
             image_dir = Path(data_item["PATH"]) / sub_dir
             self.image_paths += [str(image_dir / fn) for fn in os.listdir(image_dir) if fn.lower().endswith(("png", "jpg", "jpeg"))]
         self.label_paths = self.replace_image2label_path(self.image_paths)
         self.generate_no_label(self.label_paths)
+
+        if phase == "val":
+            self.generate_mAP_source(save_dir=Path("./data/eval_src"), mAP_file_name=data_item["MAP_FILE_NAME"])
 
 
     def __len__(self): return len(self.image_paths)
@@ -85,6 +89,50 @@ class Dataset:
 
     def load_transformer(self, transformer):
         self.transformer = transformer
+
+
+    def generate_mAP_source(self, save_dir, mAP_file_name):
+        if not save_dir.is_dir():
+            os.makedirs(save_dir, exist_ok=True)
+        self.mAP_file_path = save_dir / mAP_file_name
+        
+        if not self.mAP_file_path.is_file():
+            class_id2category = self.class_list
+            category2class_id = {t:l for l,t in class_id2category.items()}
+    
+            cocoAPI_formatter = {}
+            cocoAPI_formatter["imageToid"] = {}
+            cocoAPI_formatter["images"] = []
+            cocoAPI_formatter["annotations"] = []
+            cocoAPI_formatter["categories"] = []
+
+            lbl_id = 0
+            for i in range(len(self)):
+                filename, image, label = self.get_GT_item(i)
+                img_h, img_w = image.shape[:2]
+                cocoAPI_formatter["imageToid"][filename] = i
+                cocoAPI_formatter["images"].append({"id": i, "width": img_w, "height": img_h})
+                
+                label[:, 1:5] = transform_xcycwh_to_x1y1wh(label[:, 1:5])
+                label[:, [1,3]] *= img_w
+                label[:, [2,4]] *= img_h
+                for j in range(len(label)):
+                    x = {}
+                    x["id"] = lbl_id
+                    x["image_id"] = i
+                    x["bbox"] = [round(item, 2) for item in label[j][1:5].tolist()]
+                    x["area"] = round((x["bbox"][2] * x["bbox"][3]), 2)
+                    x["iscrowd"] = 0
+                    x["category_id"] = int(label[j][0])
+                    x["segmentation"] = []
+                    cocoAPI_formatter["annotations"].append(x)
+                    lbl_id += 1
+
+            for i, cate_name in class_id2category.items():
+                cocoAPI_formatter["categories"].append({"id": i, "supercategory": "", "name": cate_name})
+
+            with open(self.mAP_file_path, "w") as outfile:
+                json.dump(cocoAPI_formatter, outfile)
 
 
     @staticmethod
