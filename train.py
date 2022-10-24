@@ -40,9 +40,9 @@ if __name__ == "__main__":
     global color_list, class_list, epoch
 
     yaml_path = ROOT / 'data' / 'voc.yaml'
-    input_size = 448
+    input_size = 224
     batch_size = 64
-    num_epoches = 100
+    num_epoches = 200
     device = torch.device('cuda:0')
 
     train_dataset = Dataset(yaml_path=yaml_path, phase='train')
@@ -68,6 +68,6 @@ if __name__ == "__main__":
 
     for epoch in range(1, num_epoches+1):
         train(dataloader=train_loader, model=model, criterion=criterion, optimizer=optimizer, device=device)
-        validate(cocoGt=cocoGt, dataloader=val_loader, model=model, mAP_file_path=mAP_file_path, conf_threshold=0.3, nms_threshold=0.5, class_list=class_list, color_list=color_list, device=device)
+        validate(cocoGt=cocoGt, dataloader=val_loader, model=model, mAP_file_path=mAP_file_path, conf_threshold=0.01, nms_threshold=0.5, class_list=class_list, color_list=color_list, device=device)
     
     torch.save(model.state_dict(), f'./model_voc.pt')

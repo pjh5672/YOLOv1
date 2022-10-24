@@ -51,48 +51,7 @@ def validate(cocoGt, dataloader, model, mAP_file_path, conf_threshold, nms_thres
         cocoEval.params.areaRng = [[0 ** 2, 1e5 ** 2], [0 ** 2, 32 ** 2], [32 ** 2, 96 ** 2], [96 ** 2, 1e5 ** 2]]
         cocoEval.evaluate()
         cocoEval.accumulate()
-        eval_stats = summarize_performance(cocoEval=cocoEval)
-        print(eval_stats)
-
-
-def summarize_performance(cocoEval):
-    def _summarize(ap=1, iouThr=None, areaRng='all', maxDets=100):
-        p = cocoEval.params
-        aind = [i for i, aRng in enumerate(p.areaRngLbl) if aRng == areaRng]
-        mind = [i for i, mDet in enumerate(p.maxDets) if mDet == maxDets]
-        if ap == 1:
-            s = cocoEval.eval['precision']
-            if iouThr is not None:
-                t = np.where(iouThr == p.iouThrs)[0]
-                s = s[t]
-            s = s[:,:,:,aind,mind]
-        else:
-            s = cocoEval.eval['recall']
-            if iouThr is not None:
-                t = np.where(iouThr == p.iouThrs)[0]
-                s = s[t]
-            s = s[:,:,aind,mind]
-        if len(s[s>-1])==0:
-            mean_s = -1
-        else:
-            mean_s = np.mean(s[s>-1])
-        return mean_s
-        
-    stats = np.zeros((12,))
-    stats[0] = _summarize(1)                                                                # Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ]
-    stats[1] = _summarize(1, iouThr=.5, maxDets=cocoEval.params.maxDets[2])                 # Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ]
-    stats[2] = _summarize(1, iouThr=.75, maxDets=cocoEval.params.maxDets[2])                # Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ]
-    stats[3] = _summarize(1, areaRng='small', maxDets=cocoEval.params.maxDets[2])           # Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ]
-    stats[4] = _summarize(1, areaRng='medium', maxDets=cocoEval.params.maxDets[2])          # Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ]
-    stats[5] = _summarize(1, areaRng='large', maxDets=cocoEval.params.maxDets[2])           # Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ]
-    stats[6] = _summarize(0, maxDets=cocoEval.params.maxDets[0])                            # Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ]
-    stats[7] = _summarize(0, maxDets=cocoEval.params.maxDets[1])                            # Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ]
-    stats[8] = _summarize(0, maxDets=cocoEval.params.maxDets[2])                            # Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ]
-    stats[9] = _summarize(0, areaRng='small', maxDets=cocoEval.params.maxDets[2])           # Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ]
-    stats[10] = _summarize(0, areaRng='medium', maxDets=cocoEval.params.maxDets[2])         # Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ]
-    stats[11] = _summarize(0, areaRng='large', maxDets=cocoEval.params.maxDets[2])          # Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ]
-    return stats
-
+        cocoEval.summarize()
 
 
 if __name__ == "__main__":
