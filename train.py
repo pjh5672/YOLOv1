@@ -1,3 +1,4 @@
+import numpy as np
 from torch import optim
 from torch.utils.data import DataLoader
 
