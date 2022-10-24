@@ -1,0 +1,10 @@
+PATH: data/toy_dataset/
+
+TRAIN: 
+ - images/train_2
+VAL: 
+ - images/val
+
+CLASS_INFO: {
+  0: 'ship',
+}

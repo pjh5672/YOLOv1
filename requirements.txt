@@ -1,0 +1,13 @@
+--extra-index-url https://download.pytorch.org/whl/cu113
+certifi==2022.9.24
+charset-normalizer==2.1.1
+idna==3.4
+numpy==1.23.3
+opencv-python==4.5.5.64
+Pillow==9.2.0
+PyYAML==6.0
+requests==2.28.1
+torch==1.12.1+cu113
+torchvision==0.13.1+cu113
+typing-extensions==4.3.0
+urllib3==1.26.12
