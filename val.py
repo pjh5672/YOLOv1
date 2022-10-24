@@ -108,7 +108,6 @@ if __name__ == "__main__":
 
     yaml_path = ROOT / 'data' / 'toy.yaml'
     input_size = 224
-    num_classes = 1
     batch_size = 8
     device = torch.device('cuda:0')
     checkpoint = torch.load("./model_toy.pt")
@@ -122,6 +121,7 @@ if __name__ == "__main__":
 
     color_list = generate_random_color(num_classes)
     class_list = val_dataset.class_list
+    num_classes = len(class_list)
     mAP_file_path = val_dataset.mAP_file_path
     cocoGt = COCO(annotation_file=mAP_file_path)
 

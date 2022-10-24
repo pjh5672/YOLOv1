@@ -41,11 +41,10 @@ if __name__ == "__main__":
 
     yaml_path = ROOT / 'data' / 'voc.yaml'
     input_size = 224
-    num_classes = 20
     batch_size = 128
     num_epoches = 100
     device = torch.device('cuda:0')
-    
+
     train_dataset = Dataset(yaml_path=yaml_path, phase='train')
     train_transformer = AugmentTransform(input_size=input_size)
     # train_transformer = BasicTransform(input_size=input_size)
@@ -58,6 +57,7 @@ if __name__ == "__main__":
     
     color_list = generate_random_color(num_classes)
     class_list = train_dataset.class_list
+    num_classes = len(class_list)
     mAP_file_path = val_dataset.mAP_file_path
     cocoGt = COCO(annotation_file=mAP_file_path)
 
