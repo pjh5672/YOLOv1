@@ -40,8 +40,8 @@ if __name__ == "__main__":
     global color_list, class_list, epoch
 
     yaml_path = ROOT / 'data' / 'voc.yaml'
-    input_size = 224
-    batch_size = 128
+    input_size = 448
+    batch_size = 64
     num_epoches = 100
     device = torch.device('cuda:0')
 
@@ -55,9 +55,10 @@ if __name__ == "__main__":
     val_dataset.load_transformer(transformer=val_transformer)
     val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=batch_size, shuffle=False, pin_memory=True)
     
-    color_list = generate_random_color(num_classes)
     class_list = train_dataset.class_list
+    color_list = generate_random_color(num_classes)
     num_classes = len(class_list)
+    
     mAP_file_path = val_dataset.mAP_file_path
     cocoGt = COCO(annotation_file=mAP_file_path)
 
