@@ -29,18 +29,18 @@ from utils import *
 
 
 METRIC_FORMAT = [
-    "  {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ] ".format("Average Precision", "(AP)", "0.50:0.95", "all", 100),
-    "  {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ] ".format("Average Precision", "(AP)", "0.50", "all", 100),
-    "  {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ] ".format("Average Precision", "(AP)", "0.75", "all", 100),
-    "  {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ] ".format("Average Precision", "(AP)", "0.50:0.95", "small", 100),
-    "  {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ] ".format("Average Precision", "(AP)", "0.50:0.95", "medium", 100),
-    "  {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ] ".format("Average Precision", "(AP)", "0.50:0.95", "large", 100),
-    "  {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ] ".format("Average Recall", "(AR)", "0.50:0.95", "all", 1),
-    "  {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ] ".format("Average Recall", "(AR)", "0.50:0.95", "all", 10),
-    "  {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ] ".format("Average Recall", "(AR)", "0.50:0.95", "all", 100),
-    "  {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ] ".format("Average Recall", "(AR)", "0.50:0.95", "small", 100),
-    "  {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ] ".format("Average Recall", "(AR)", "0.50:0.95", "medium", 100),
-    "  {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ] ".format("Average Recall", "(AR)", "0.50:0.95", "large", 100),
+    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Precision", "(AP)", "0.50:0.95", "all", 100),
+    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Precision", "(AP)", "0.50", "all", 100),
+    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Precision", "(AP)", "0.75", "all", 100),
+    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Precision", "(AP)", "0.50:0.95", "small", 100),
+    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Precision", "(AP)", "0.50:0.95", "medium", 100),
+    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Precision", "(AP)", "0.50:0.95", "large", 100),
+    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Recall", "(AR)", "0.50:0.95", "all", 1),
+    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Recall", "(AR)", "0.50:0.95", "all", 10),
+    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Recall", "(AR)", "0.50:0.95", "all", 100),
+    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Recall", "(AR)", "0.50:0.95", "small", 100),
+    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Recall", "(AR)", "0.50:0.95", "medium", 100),
+    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Recall", "(AR)", "0.50:0.95", "large", 100),
 ]
 
 

@@ -116,7 +116,6 @@ def main():
     args.mAP_file_path = val_dataset.mAP_file_path
     args.cocoGt = COCO(annotation_file=args.mAP_file_path)
     best_mAP = 0.0
-    mAP_str = "\n"
 
     for epoch in range(args.num_epochs):
         train(args=args, dataloader=train_loader, model=model, criterion=criterion, optimizer=optimizer)
@@ -124,6 +123,7 @@ def main():
 
         if (mAP_stats is not None) and (mAP_stats[0] > best_mAP):
             best_mAP = mAP_stats[0]
+            mAP_str = "\n"
             for mAP_format, mAP_value in zip(METRIC_FORMAT, mAP_stats):
                 mAP_str += f"{mAP_format} = {mAP_value:.3f}\n"
             logger.info(mAP_str)

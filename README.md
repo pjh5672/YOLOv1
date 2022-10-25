@@ -35,15 +35,15 @@ This is a repository for reproducing YOLOv1 detection model following the [*orig
 ![Train toy-1 dataset](./asset/toy_2_result.gif)
 </div>
 
-### - Step 3. Train 10 images including one background image
+### - Step 3. Train 10 images including a no-object image
 - **Train: toy_dataset/train_3, Val: toy_dataset/train_2**
 - Intentional overfitting without any augmentation
 - Setting learning rate to 1e-4
-- Exception handling for non-detectable case
+- Exception handling for no-object case
 - Best mAP value should be approximately as below
 
 <div align="center">
-  <div> Non-detectable case (Bird) </div>
+  <div> No-object case(Bird) </div>
 
 <img src=./asset/007102.jpg width="25%" />
 </div>
@@ -52,19 +52,18 @@ This is a repository for reproducing YOLOv1 detection model following the [*orig
 Best mAP performance training after 150 epochs
 
 ```log
-  Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.516
-  Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.833
-  Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.582
-  Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
-  Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = -1.000
-  Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.516
-  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.567
-  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.567
-  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.567
-  Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
-  Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = -1.000
-  Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.567
-
+   Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.431
+   Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.778
+   Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.448
+   Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
+   Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = -1.000
+   Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.439
+   Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.489
+   Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.544
+   Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.544
+   Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
+   Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = -1.000
+   Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.544
 ```
 
 </div>
