@@ -37,7 +37,7 @@ from val import validate, METRIC_FORMAT
 
 
 def train(args, dataloader, model, criterion, optimizer):
-    loss_type = {'multipart', 'obj', 'noobj', 'box', 'cls'}
+    loss_type = ['multipart', 'obj', 'noobj', 'box', 'cls']
     losses = defaultdict(float)
 
     model.train()
