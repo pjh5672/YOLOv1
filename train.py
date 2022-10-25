@@ -67,7 +67,6 @@ def train(args, dataloader, model, criterion, optimizer):
 def parse_args(make_dirs=True):
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp_name", type=str, required=True, help="Name to log training")
-
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
     parser.add_argument("--img_size", type=int, default=224, help="Model input size")
     parser.add_argument("--batch_size", type=int, default=8, help="Batch size")
@@ -117,16 +116,16 @@ def main():
     args.mAP_file_path = val_dataset.mAP_file_path
     args.cocoGt = COCO(annotation_file=args.mAP_file_path)
     best_mAP = 0.0
+    mAP_str = "\n"
 
     for epoch in range(args.num_epochs):
         train(args=args, dataloader=train_loader, model=model, criterion=criterion, optimizer=optimizer)
         mAP_stats = validate(args=args, dataloader=val_loader, model=model, epoch=epoch)
-        
-        if mAP_stats[0] > best_mAP:
+
+        if (mAP_stats is not None) and (mAP_stats[0] > best_mAP):
             best_mAP = mAP_stats[0]
-            mAP_str = "\n"
             for mAP_format, mAP_value in zip(METRIC_FORMAT, mAP_stats):
-                mAP_str += f"{mAP_format} = {mAP_value:.4f}\n"
+                mAP_str += f"{mAP_format} = {mAP_value:.3f}\n"
             logger.info(mAP_str)
             torch.save(model.state_dict(), args.weight_dir / "best.pt")
     torch.save(model.state_dict(), args.weight_dir / "last.pt")

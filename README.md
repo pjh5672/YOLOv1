@@ -21,7 +21,7 @@ This is a repository for reproducing YOLOv1 detection model following the [*orig
 <div align="center">
 <div> Inference result for 150 epochs </div>
 
-![Train toy-1 dataset](./asset/train_toy_1.gif)
+![Train toy-1 dataset](./asset/toy_1_result.gif)
 </div>
 
 ### - Step 2. Train 9 images for batch-training  
@@ -32,38 +32,38 @@ This is a repository for reproducing YOLOv1 detection model following the [*orig
 <div align="center">
 <div> Inference result for 150 epochs </div>
 
-![Train toy-1 dataset](./asset/train_toy_2.gif)
+![Train toy-1 dataset](./asset/toy_2_result.gif)
 </div>
 
 ### - Step 3. Train 10 images including one background image
 - **Train: toy_dataset/train_3, Val: toy_dataset/train_2**
 - Intentional overfitting without any augmentation
 - Setting learning rate to 1e-4
-- Exception handling for non-existent object case
+- Exception handling for non-detectable case
 - Best mAP value should be approximately as below
 
 <div align="center">
-<div> Non-existent case (background) </div>
+<div> Non-detectable case (Bird) </div>
 
-<img src=./asset/no_obj.jpg width="25%" />
+<img src=./asset/007102.jpg width="25%" />
 </div>
 
 <div align="center">
 Best mAP performance training after 150 epochs
 
 ```log
-  Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ]  = 0.4372
-  Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ]  = 0.8376
-  Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ]  = 0.2455
-  Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ]  = -1.0000
-  Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ]  = -1.0000
-  Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ]  = 0.4477
-  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ]  = 0.5111
-  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ]  = 0.5111
-  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ]  = 0.5111
-  Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ]  = -1.0000
-  Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ]  = -1.0000
-  Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ]  = 0.5111
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.516
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.833
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.582
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.516
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.567
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.567
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.567
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.567
 
 ```
 
@@ -72,7 +72,7 @@ Best mAP performance training after 150 epochs
 <div align="center">
 <div> Inference result for 150 epochs </div>
 
-![Train toy-1 dataset](./asset/train_toy_3.gif)
+![Train toy-1 dataset](./asset/toy_3_result.gif)
 </div>
 
 

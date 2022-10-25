@@ -8,5 +8,5 @@ VAL:
 MAP_FILE_NAME: toy_dataset_val.json
 
 CLASS_INFO: {
-  0: 'ship'
+  0: 'dog'
 }

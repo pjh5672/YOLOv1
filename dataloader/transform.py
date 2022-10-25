@@ -38,12 +38,12 @@ class AugmentTransform:
         self.input_size = input_size
         self.flip = Albumentations(p_flipud=0.0, p_fliplr=0.5)
         self.gain_h = 0.015
-        self.gain_s = 0.1
-        self.gain_v = 0.1
-        self.degrees = 5
-        self.translate = 0.0
-        self.scale = 0.1
-        self.perspective = 0.0
+        self.gain_s = 0.5
+        self.gain_v = 0.3
+        self.degrees = 10
+        self.translate = 0.15
+        self.scale = 0.5
+        self.perspective = 0.0003
     
 
     def __call__(self, image, label):
