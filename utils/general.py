@@ -1,3 +1,5 @@
+import os
+import cv2
 import numpy as np
 
 
@@ -11,6 +13,15 @@ def scale_to_norm(boxes, image_w, image_h):
     boxes[:,[0,2]] /= image_w
     boxes[:,[1,3]] /= image_h
     return boxes
+
+
+def square_to_original(boxes, input_size, origin_size):
+    img_h, img_w, _ = origin_size
+    boxes /= input_size
+    boxes[:, [0,2]] *= (max(origin_size) / img_w)
+    boxes[:, [1,3]] *= (max(origin_size) / img_h)
+    box_x1y1x2y2 = scale_to_original(boxes, scale_w=img_w, scale_h=img_h)
+    return box_x1y1x2y2
 
 
 def clip_box_coordinate(boxes):
@@ -98,3 +109,19 @@ def run_NMS(prediction, iou_threshold, class_agnostic=False, maxDets=100):
     prediction_multi_class = np.concatenate(prediction_multi_class, axis=0)
     order = prediction_multi_class[:, -1].argsort()[::-1]
     return prediction_multi_class[order[:maxDets]]
+
+
+def imwrite(filename, img):
+    try:
+        ext = os.path.splitext(filename)[1]
+        result, n = cv2.imencode(ext, img)
+
+        if result:
+            with open(filename, mode='w+b') as f:
+                n.tofile(f)
+            return True
+        else:
+            return False
+    except Exception as e:
+        print(e)
+        return False

@@ -1,13 +1,11 @@
 import torch
-import numpy as np
 from torch import nn
 
 
 
 class YoloLoss():
-    def __init__(self, input_size, num_classes, device, lambda_coord=5.0, lambda_noobj=0.5):
+    def __init__(self, input_size, num_classes, lambda_coord=5.0, lambda_noobj=0.5):
         self.stride = 32
-        self.device = device
         self.lambda_coord = lambda_coord
         self.lambda_noobj = lambda_noobj
         self.num_attributes = (1 + 4) + num_classes
@@ -16,6 +14,7 @@ class YoloLoss():
 
 
     def __call__(self, predictions, labels):
+        self.device = predictions.device
         self.batch_size = predictions.shape[0]
         targets = self.build_batch_target(labels).to(self.device)
 
@@ -50,7 +49,7 @@ class YoloLoss():
         box_loss = (txty_loss + twth_loss) / self.batch_size
         cls_loss /= self.batch_size
         multipart_loss = obj_loss + self.lambda_noobj * noobj_loss + self.lambda_coord * box_loss + cls_loss
-        return multipart_loss, (obj_loss, noobj_loss, box_loss, cls_loss)
+        return multipart_loss, obj_loss, noobj_loss, box_loss, cls_loss
 
 
     def build_target(self, label):
@@ -97,13 +96,13 @@ class YoloLoss():
         self.input_size = input_size
         self.grid_size = self.input_size // self.stride
         grid_y, grid_x = torch.meshgrid((torch.arange(self.grid_size), torch.arange(self.grid_size)), indexing="ij")
-        self.grid_x = grid_x.contiguous().view((1, -1)).to(self.device)
-        self.grid_y = grid_y.contiguous().view((1, -1)).to(self.device)
+        self.grid_x = grid_x.contiguous().view((1, -1))
+        self.grid_y = grid_y.contiguous().view((1, -1))
 
 
     def transform_cxcywh_to_x1y1x2y2(self, boxes):
-        xc = boxes[..., 0] + self.grid_x
-        yc = boxes[..., 1] + self.grid_y
+        xc = boxes[..., 0] + self.grid_x.to(self.device)
+        yc = boxes[..., 1] + self.grid_y.to(self.device)
         w = boxes[..., 2]
         h = boxes[..., 3]
         x1 = xc - w/2
@@ -133,16 +132,16 @@ if __name__ == "__main__":
     yaml_path = ROOT / 'data' / 'toy.yaml'
     input_size = 224
     num_classes = 1
-    batch_size = 1
-    device = torch.device('cpu')
+    batch_size = 2
+    device = torch.device('cuda')
 
     transformer = BasicTransform(input_size=input_size)
     train_dataset = Dataset(yaml_path=yaml_path, phase='train')
     train_dataset.load_transformer(transformer=transformer)
     train_loader = DataLoader(dataset=train_dataset, collate_fn=Dataset.collate_fn, batch_size=batch_size, shuffle=False, pin_memory=True, sampler=None)
     
-    model = YoloModel(input_size=input_size, num_classes=num_classes, device=device, num_boxes=2).to(device)
-    criterion = YoloLoss(input_size=input_size, num_classes=num_classes, device=device, lambda_coord=5.0, lambda_noobj=0.5)
+    model = YoloModel(input_size=input_size, num_classes=num_classes, num_boxes=2).to(device)
+    criterion = YoloLoss(input_size=input_size, num_classes=num_classes, lambda_coord=5.0, lambda_noobj=0.5)
     optimizer = optim.SGD(model.parameters(), lr=0.0001)
     optimizer.zero_grad()
 
@@ -151,11 +150,11 @@ if __name__ == "__main__":
         for index, minibatch in enumerate(train_loader):
             filenames, images, labels, ori_img_sizes = minibatch
             predictions = model(images.to(device))
-            loss, items = criterion(predictions=predictions, labels=labels)
-            loss.backward()
+            loss = criterion(predictions=predictions, labels=labels)
+            loss[0].backward()
             optimizer.step()
             optimizer.zero_grad()
 
             if index % 50 == 0:
-                obj_loss, noobj_loss, box_loss, cls_loss = items
-                print(f"[Epoch:{epoch:02d}] loss:{loss.item():.4f}, obj:{obj_loss.item():.04f}, noobj:{noobj_loss.item():.04f}, box:{box_loss.item():.04f}, cls:{cls_loss.item():.04f}")
+                multipart_loss, obj_loss, noobj_loss, box_loss, cls_loss = loss
+                print(f"[Epoch:{epoch:02d}] loss:{multipart_loss.item():.4f}, obj:{obj_loss.item():.04f}, noobj:{noobj_loss.item():.04f}, box:{box_loss.item():.04f}, cls:{cls_loss.item():.04f}")

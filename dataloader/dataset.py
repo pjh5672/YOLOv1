@@ -33,7 +33,8 @@ class Dataset:
             self.image_paths += [str(image_dir / fn) for fn in os.listdir(image_dir) if fn.lower().endswith(("png", "jpg", "jpeg"))]
         self.label_paths = self.replace_image2label_path(self.image_paths)
         self.generate_no_label(self.label_paths)
-
+        
+        self.mAP_file_path = None
         if phase == "val":
             self.generate_mAP_source(save_dir=Path("./data/eval_src"), mAP_file_name=data_item["MAP_FILE_NAME"])
 

@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from element import Conv
+from element import Conv, weight_init_kaiming_uniform
 
 
 
@@ -14,6 +14,7 @@ class YoloHead(nn.Module):
         self.conv3 = Conv(in_channels, in_channels//2, kernel_size=1)
         self.conv4 = Conv(in_channels//2, in_channels, kernel_size=3, padding=1)
         self.conv5 = nn.Conv2d(in_channels, self.num_attributes, kernel_size=1)
+        self.apply(weight_init_kaiming_uniform)
 
 
     def forward(self, x):

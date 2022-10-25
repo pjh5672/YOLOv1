@@ -8,4 +8,5 @@ if str(ROOT) not in sys.path:
 
 from .general import *
 from .visualize import *
+from .log import *
 from .loss import YoloLoss
