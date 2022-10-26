@@ -68,7 +68,7 @@ def validate(args, dataloader, model, epoch=0):
             prediction = filter_confidence(prediction=prediction, conf_threshold=args.conf_thres)
             prediction = run_NMS(prediction=prediction, iou_threshold=args.nms_thres)
             
-            if len(check_images) < 6:
+            if len(check_images) < 5:
                 check_images.append(to_image(images[j]))
                 check_preds.append(prediction.copy())
                 
@@ -105,7 +105,6 @@ def validate(args, dataloader, model, epoch=0):
 def parse_args(make_dirs=True):
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp_name", type=str, required=True, help="Name to log training")
-
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
     parser.add_argument("--img_size", type=int, default=224, help="Model input size")
     parser.add_argument("--batch_size", type=int, default=4, help="Batch size")
