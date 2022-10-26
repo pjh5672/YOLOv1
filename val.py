@@ -106,7 +106,7 @@ def parse_args(make_dirs=True):
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp_name", type=str, required=True, help="Name to log training")
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
-    parser.add_argument("--img_size", type=int, default=224, help="Model input size")
+    parser.add_argument("--img_size", type=int, default=448, help="Model input size")
     parser.add_argument("--batch_size", type=int, default=4, help="Batch size")
     parser.add_argument("--conf_thres", type=float, default=0.5, help="Threshold to filter confidence score")
     parser.add_argument("--nms_thres", type=float, default=0.5, help="Threshold to filter Box IoU of NMS process")
