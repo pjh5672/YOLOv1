@@ -124,7 +124,7 @@ def main():
     val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=args.batch_size, shuffle=False, pin_memory=True)
 
     args.nw = max(round(args.warmup_epoch * len(train_loader)), 100)
-    args.accumulate = max(round(args.nbs / args.batch_size), 1)  # accumulate loss before optimizing
+    args.accumulate = max(round(args.nbs / args.batch_size), 1)
     args.last_opt_step = -1
     args.class_list = train_dataset.class_list
     args.num_classes = len(args.class_list)
