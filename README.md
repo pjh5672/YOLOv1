@@ -70,7 +70,7 @@ Best mAP performance training after 150 epochs
 </div>
 
 <div align="center">
-  <div> Inference result for 150 epochs </div>
+  <div> Inference results for 135 epochs </div>
 
 ![Train toy-1 dataset](./asset/toy_3_result.gif)
 </div>
