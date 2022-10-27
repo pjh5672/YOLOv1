@@ -32,7 +32,7 @@ except:
 
 from dataloader import Dataset, BasicTransform, AugmentTransform, to_image
 from model import YoloModel
-from utils import YoloLoss, generate_random_color, build_basic_logger
+from utils import YoloLoss, generate_random_color, build_basic_logger, set_lr
 from val import validate, METRIC_FORMAT
 
 
@@ -45,21 +45,15 @@ def train(args, dataloader, model, criterion, optimizer):
     for i, minibatch in enumerate(dataloader):
         ni = i + len(dataloader) * epoch
         if ni <= args.nw:
-            xi = [0, args.nw]
-            args.accumulate = max(1, np.interp(ni, xi, [1, args.nbs / args.batch_size]).round())
-            for j, x in enumerate(optimizer.param_groups):
-                x["lr"] = np.interp(ni, xi, [args.init_lr, args.run_lr])
+            set_lr(optimizer, np.interp(ni, [0, args.nw], [args.init_lr, args.base_lr]))
 
         images, labels = minibatch[1].cuda(args.rank, non_blocking=True), minibatch[2]
         predictions = model(images)
         loss = criterion(predictions=predictions, labels=labels)
         loss[0].backward()
-
-        if ni - args.last_opt_step >= args.accumulate:
-            optimizer.step()
-            optimizer.zero_grad()
-            args.last_opt_step = ni
-
+        optimizer.step()
+        optimizer.zero_grad()
+        
         for loss_name, loss_value in zip(loss_type, loss):
             if not torch.isfinite(loss_value) and loss_name != 'multipart':
                 print(f'############## {loss_name} Loss is Nan/Inf ! {loss_value} ##############')
@@ -80,11 +74,10 @@ def parse_args(make_dirs=True):
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
     parser.add_argument("--img_size", type=int, default=448, help="Model input size")
     parser.add_argument("--batch_size", type=int, default=64, help="Batch size")
-    parser.add_argument("--nbs", type=int, default=64, help="Batch size for accumulate training")
-    parser.add_argument("--num_epochs", type=int, default=135, help="Number of training epochs")
-    parser.add_argument("--warmup_epoch", type=int, default=5, help="Epochs for warming up training")
+    parser.add_argument("--num_epochs", type=int, default=300, help="Number of training epochs")
+    parser.add_argument("--warmup_epoch", type=int, default=3, help="Epochs for warming up training")
     parser.add_argument("--init_lr", type=float, default=0.001, help="Learning rate for inital training")
-    parser.add_argument("--run_lr", type=float, default=0.01, help="Learning rate after warmup")
+    parser.add_argument("--base_lr", type=float, default=0.01, help="Base Learning rate")
     parser.add_argument("--momentum", type=float, default=0.9, help="Momentum")
     parser.add_argument("--weight_decay", type=float, default=0.0005, help="Weight decay")
     parser.add_argument("--lambda_coord", type=float, default=5.0, help="Lambda for box regression loss")
@@ -114,8 +107,8 @@ def main():
     logger.info(f"[Arguments]\n{pprint.pformat(vars(args))}\n")
 
     train_dataset = Dataset(yaml_path=args.data, phase='train')
-    train_transformer = BasicTransform(input_size=args.img_size)
-    # train_transformer = AugmentTransform(input_size=args.img_size)
+    # train_transformer = BasicTransform(input_size=args.img_size)
+    train_transformer = AugmentTransform(input_size=args.img_size)
     train_dataset.load_transformer(transformer=train_transformer)
     train_loader = DataLoader(dataset=train_dataset, collate_fn=Dataset.collate_fn, batch_size=args.batch_size, shuffle=True, pin_memory=True)
     val_dataset = Dataset(yaml_path=args.data, phase='val')
@@ -124,8 +117,6 @@ def main():
     val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=args.batch_size, shuffle=False, pin_memory=True)
 
     args.nw = max(round(args.warmup_epoch * len(train_loader)), 100)
-    args.accumulate = max(round(args.nbs / args.batch_size), 1)
-    args.last_opt_step = -1
     args.class_list = train_dataset.class_list
     args.num_classes = len(args.class_list)
     args.color_list = generate_random_color(args.num_classes)
@@ -133,7 +124,7 @@ def main():
     model = YoloModel(input_size=args.img_size, num_classes=args.num_classes, num_boxes=2).cuda(args.rank)
     criterion = YoloLoss(input_size=args.img_size, num_classes=args.num_classes, lambda_coord=args.lambda_coord, lambda_noobj=args.lambda_noobj)
     optimizer = optim.SGD(model.parameters(), lr=args.init_lr, momentum=args.momentum, weight_decay=args.weight_decay)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[75,105], gamma=0.1)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[200, 250], gamma=0.1)
 
     args.mAP_file_path = val_dataset.mAP_file_path
     args.cocoGt = COCO(annotation_file=args.mAP_file_path)

@@ -3,6 +3,12 @@ import cv2
 import numpy as np
 
 
+
+def set_lr(optimizer, lr):
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
+
 def scale_to_original(boxes, scale_w, scale_h):
     boxes[:,[0,2]] *= scale_w
     boxes[:,[1,3]] *= scale_h
