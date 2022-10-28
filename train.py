@@ -137,7 +137,7 @@ def main():
         scheduler.step()
 
         torch.save(model.state_dict(), args.weight_dir / "last.pt")
-        if (mAP_stats is not None) and (mAP_stats[0] > best_mAP):
+        if (mAP_stats is not None) and (mAP_stats[1] > best_mAP):
             best_epoch = epoch
             best_mAP = mAP_stats[1]
             mAP_str = "\n"
