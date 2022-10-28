@@ -139,7 +139,7 @@ def main():
         torch.save(model.state_dict(), args.weight_dir / "last.pt")
         if (mAP_stats is not None) and (mAP_stats[0] > best_mAP):
             best_epoch = epoch
-            best_mAP = mAP_stats[0]
+            best_mAP = mAP_stats[1]
             mAP_str = "\n"
             for mAP_format, mAP_value in zip(METRIC_FORMAT, mAP_stats):
                 mAP_str += f"{mAP_format} = {mAP_value:.3f}\n"
