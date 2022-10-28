@@ -1,6 +1,7 @@
 # My files 
 .venv
 *.pt
+experiment/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
