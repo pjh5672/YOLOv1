@@ -24,7 +24,6 @@ class Conv(nn.Module):
 
 class BasicBlock(nn.Module):
     expansion = 1
-
     def __init__(self, in_channels, out_channels, stride=1, downsample=None):
         super().__init__()
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
@@ -37,7 +36,6 @@ class BasicBlock(nn.Module):
 
     def forward(self, x):
         identity = x
-
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
@@ -55,7 +53,6 @@ class BasicBlock(nn.Module):
 
 class BottleNeck(nn.Module):
     expansion = 4
-
     def __init__(self, in_channels, out_channels, stride=1, downsample=None):
         super().__init__()
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, bias=False)
@@ -70,7 +67,6 @@ class BottleNeck(nn.Module):
     
     def forward(self, x):
         identity = x
-
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
