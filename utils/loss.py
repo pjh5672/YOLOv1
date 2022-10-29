@@ -4,13 +4,12 @@ from torch import nn
 
 
 class YoloLoss():
-    def __init__(self, input_size, num_classes, lambda_coord=5.0, lambda_noobj=0.5):
-        self.stride = 32
+    def __init__(self, num_classes, lambda_coord=5.0, lambda_noobj=0.5):
+        self.grid_size = 7
         self.lambda_coord = lambda_coord
         self.lambda_noobj = lambda_noobj
         self.num_attributes = (1 + 4) + num_classes
         self.mse_loss = nn.MSELoss(reduction="mean")
-        self.set_grid(input_size)
 
 
     def __call__(self, predictions, labels):
@@ -19,12 +18,12 @@ class YoloLoss():
         targets = self.build_batch_target(labels).to(self.device)
 
         with torch.no_grad():
-            iou1 = self.calculate_iou(pred_box_cxcywh=predictions[:, :self.grid_size * self.grid_size, 1:5], target_box_cxcywh=targets[..., 1:5])
-            iou2 = self.calculate_iou(pred_box_cxcywh=predictions[:, self.grid_size * self.grid_size:, 1:5], target_box_cxcywh=targets[..., 1:5])
+            iou1 = self.calculate_iou(pred_box_cxcywh=predictions[:, :(self.grid_size * self.grid_size), 1:5], target_box_cxcywh=targets[..., 1:5])
+            iou2 = self.calculate_iou(pred_box_cxcywh=predictions[:, (self.grid_size * self.grid_size):, 1:5], target_box_cxcywh=targets[..., 1:5])
             best_box = torch.stack((iou1, iou2), dim=-1).max(dim=-1).indices
             best_box = torch.cat((best_box.eq(0), best_box.eq(1)), dim=-1)
             ious = torch.cat((iou1, iou2), dim=-1)
-            
+
         positive_mask = (targets[..., 0].tile(1,2) * best_box).bool()
         pred_obj = (predictions[..., 0])[positive_mask]
         pred_noobj = predictions[..., 0][~positive_mask]
@@ -44,7 +43,6 @@ class YoloLoss():
         twth_loss = self.mse_loss(pred_box_twth.sign() * (pred_box_twth.abs() + 1e-8).sqrt(), (target_box_twth + 1e-8).sqrt())
         cls_loss = self.mse_loss(pred_cls, target_cls)
         box_loss = (txty_loss + twth_loss)
-
         multipart_loss = obj_loss + self.lambda_noobj * noobj_loss + self.lambda_coord * box_loss + cls_loss
         return multipart_loss, obj_loss, noobj_loss, box_loss, cls_loss
 
@@ -57,15 +55,10 @@ class YoloLoss():
         else:
             for item in label:
                 cls_id = item[0].long()
-                gt_box = item[1:5] * self.grid_size
-                grid_i = gt_box[0].long()
-                grid_j = gt_box[1].long()
-                tx = gt_box[0] - grid_i
-                ty = gt_box[1] - grid_j
-                tw = gt_box[2]
-                th = gt_box[3]
+                grid_i = (item[1] * self.grid_size).long()
+                grid_j = (item[2] * self.grid_size).long()
                 target[grid_j, grid_i, 0] = 1.0
-                target[grid_j, grid_i, 1:5] = torch.Tensor([tx,ty,tw,th])
+                target[grid_j, grid_i, 1:5] = item[1:5]
                 target[grid_j, grid_i, 5 + cls_id] = 1.0
             return target
     
@@ -76,37 +69,26 @@ class YoloLoss():
     
     
     def calculate_iou(self, pred_box_cxcywh, target_box_cxcywh):
-        pred_box_x1y1x2y2 = self.transform_cxcywh_to_x1y1x2y2(pred_box_cxcywh)
-        target_box_x1y1x2y2 = self.transform_cxcywh_to_x1y1x2y2(target_box_cxcywh)
-        target_box_x1y1x2y2[target_box_cxcywh.eq(0)] = 0.
-        x1 = torch.max(pred_box_x1y1x2y2[..., 0], target_box_x1y1x2y2[..., 0])
-        y1 = torch.max(pred_box_x1y1x2y2[..., 1], target_box_x1y1x2y2[..., 1])
-        x2 = torch.min(pred_box_x1y1x2y2[..., 2], target_box_x1y1x2y2[..., 2])
-        y2 = torch.min(pred_box_x1y1x2y2[..., 3], target_box_x1y1x2y2[..., 3])
+        try:
+            pred_box_x1y1x2y2 = self.transform_cxcywh_to_x1y1x2y2(pred_box_cxcywh)
+            target_box_x1y1x2y2 = self.transform_cxcywh_to_x1y1x2y2(target_box_cxcywh)
+            x1 = torch.max(pred_box_x1y1x2y2[..., 0], target_box_x1y1x2y2[..., 0])
+            y1 = torch.max(pred_box_x1y1x2y2[..., 1], target_box_x1y1x2y2[..., 1])
+            x2 = torch.min(pred_box_x1y1x2y2[..., 2], target_box_x1y1x2y2[..., 2])
+            y2 = torch.min(pred_box_x1y1x2y2[..., 3], target_box_x1y1x2y2[..., 3])
+        except:
+            print(pred_box_x1y1x2y2.shape)
+            print(target_box_x1y1x2y2.shape)
         inter = (x2 - x1).clamp(min=0) * (y2 - y1).clamp(min=0)
         union = abs(pred_box_cxcywh[..., 2] * pred_box_cxcywh[..., 3]) + abs(target_box_cxcywh[..., 2] * target_box_cxcywh[..., 3]) - inter
         inter[inter.gt(0)] = inter[inter.gt(0)] / union[inter.gt(0)]
         return inter
     
 
-    def set_grid(self, input_size):
-        self.input_size = input_size
-        self.grid_size = self.input_size // self.stride
-        grid_y, grid_x = torch.meshgrid((torch.arange(self.grid_size), torch.arange(self.grid_size)), indexing="ij")
-        self.grid_x = grid_x.contiguous().view((1, -1))
-        self.grid_y = grid_y.contiguous().view((1, -1))
-
-
     def transform_cxcywh_to_x1y1x2y2(self, boxes):
-        xc = boxes[..., 0] + self.grid_x.to(self.device)
-        yc = boxes[..., 1] + self.grid_y.to(self.device)
-        w = boxes[..., 2]
-        h = boxes[..., 3]
-        x1 = xc - w/2
-        y1 = yc - h/2
-        x2 = xc + w/2
-        y2 = yc + h/2
-        return torch.stack((x1, y1, x2, y2), dim=-1)
+        x1y1 = boxes[..., :2] - boxes[..., 2:] / 2
+        x2y2 = boxes[..., :2] + boxes[..., 2:] / 2
+        return torch.cat((x1y1, x2y2), dim=-1)
 
 
 
@@ -137,12 +119,12 @@ if __name__ == "__main__":
     train_dataset.load_transformer(transformer=transformer)
     train_loader = DataLoader(dataset=train_dataset, collate_fn=Dataset.collate_fn, batch_size=batch_size, shuffle=False, pin_memory=True, sampler=None)
     
-    model = YoloModel(input_size=input_size, num_classes=num_classes, num_boxes=2).to(device)
-    criterion = YoloLoss(input_size=input_size, num_classes=num_classes, lambda_coord=5.0, lambda_noobj=0.5)
+    model = YoloModel(num_classes=num_classes, num_boxes=2).to(device)
+    criterion = YoloLoss(num_classes=num_classes, lambda_coord=5.0, lambda_noobj=0.5)
     optimizer = optim.SGD(model.parameters(), lr=0.0001)
     optimizer.zero_grad()
 
-    for epoch in range(30):
+    for epoch in range(10):
         model.train()
         for index, minibatch in enumerate(train_loader):
             filenames, images, labels, ori_img_sizes = minibatch

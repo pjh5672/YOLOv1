@@ -53,6 +53,8 @@ def visualize_target(image, label, class_list, color_list):
 
 
 def visualize_prediction(image, prediction, class_list, color_list):
+    input_size = image.shape[0]
     if len(prediction) > 0:
+        prediction[:, 1:5] *= input_size
         image = visualize(image, prediction, class_list, color_list, show_class=True, show_score=True)
     return image[...,::-1]

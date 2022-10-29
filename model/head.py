@@ -14,6 +14,7 @@ class YoloHead(nn.Module):
         self.conv3 = Conv(in_channels, in_channels//2, kernel_size=1)
         self.conv4 = Conv(in_channels//2, in_channels, kernel_size=3, padding=1)
         self.conv5 = nn.Conv2d(in_channels, self.num_attributes, kernel_size=1)
+        self.pool = nn.AdaptiveAvgPool2d(output_size=(7, 7))
         self.apply(weight_init_kaiming_uniform)
 
 
@@ -23,6 +24,7 @@ class YoloHead(nn.Module):
         out = self.conv3(out)
         out = self.conv4(out)
         out = self.conv5(out)
+        out = self.pool(out)
         return out
 
 

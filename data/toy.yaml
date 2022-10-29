@@ -3,7 +3,7 @@ PATH: data/toy_dataset/
 TRAIN: 
  - images/train_3
 VAL: 
- - images/train_2
+ - images/train_4
 
 MAP_FILE_NAME: toy_dataset_val.json
 

@@ -15,7 +15,6 @@ from torch import optim
 from torch.backends import cudnn
 from torch.utils.data import DataLoader
 
-ROOT = Path(__file__).resolve().parents[0]
 OS_SYSTEM = platform.system()
 TIMESTAMP = datetime.today().strftime('%Y-%m-%d_%H-%M')
 cudnn.benchmark = True
@@ -82,16 +81,17 @@ def parse_args(make_dirs=True):
     parser.add_argument("--weight_decay", type=float, default=0.0005, help="Weight decay")
     parser.add_argument("--lambda_coord", type=float, default=5.0, help="Lambda for box regression loss")
     parser.add_argument("--lambda_noobj", type=float, default=0.5, help="Lambda for no-objectness loss")
-    parser.add_argument("--conf_thres", type=float, default=0.5, help="Threshold to filter confidence score")
-    parser.add_argument("--nms_thres", type=float, default=0.5, help="Threshold to filter Box IoU of NMS process")
+    parser.add_argument("--conf_thres", type=float, default=0.1, help="Threshold to filter confidence score")
+    parser.add_argument("--nms_thres", type=float, default=0.6, help="Threshold to filter Box IoU of NMS process")
     parser.add_argument("--rank", type=int, default=0, help="Process id for computation")
     parser.add_argument("--img_interval", type=int, default=5, help="Interval to log train/val image")
-
     args = parser.parse_args()
+    
+    ROOT = Path(__file__).resolve().parents[0]
     args.data = ROOT / "data" / args.data
     args.exp_path = ROOT / 'experiment' / args.exp_name
     args.weight_dir = args.exp_path / 'weight'
-    args.img_log_dir = args.exp_path / 'image'
+    args.img_log_dir = args.exp_path / 'train_image'
 
     if make_dirs:
         os.makedirs(args.weight_dir, exist_ok=True)
@@ -121,31 +121,32 @@ def main():
     args.num_classes = len(args.class_list)
     args.color_list = generate_random_color(args.num_classes)
     
-    model = YoloModel(input_size=args.img_size, num_classes=args.num_classes, num_boxes=2).cuda(args.rank)
-    criterion = YoloLoss(input_size=args.img_size, num_classes=args.num_classes, lambda_coord=args.lambda_coord, lambda_noobj=args.lambda_noobj)
+    model = YoloModel(num_classes=args.num_classes, num_boxes=2).cuda(args.rank)
+    criterion = YoloLoss(num_classes=args.num_classes, lambda_coord=args.lambda_coord, lambda_noobj=args.lambda_noobj)
     optimizer = optim.SGD(model.parameters(), lr=args.init_lr, momentum=args.momentum, weight_decay=args.weight_decay)
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[230, 270], gamma=0.1)
 
     args.mAP_file_path = val_dataset.mAP_file_path
     args.cocoGt = COCO(annotation_file=args.mAP_file_path)
-    best_mAP = 0
-    best_epoch = 0
 
+    best_epoch = 0
+    best_score = 0
     for epoch in range(args.num_epochs):
         train(args=args, dataloader=train_loader, model=model, criterion=criterion, optimizer=optimizer)
         mAP_stats = validate(args=args, dataloader=val_loader, model=model, epoch=epoch)
         scheduler.step()
 
         torch.save(model.state_dict(), args.weight_dir / "last.pt")
-        if (mAP_stats is not None) and (mAP_stats[1] > best_mAP):
+        ap95, ap50 = mAP_stats[:2]
+        if (mAP_stats is not None) and (ap50 > best_score):
             best_epoch = epoch
-            best_mAP = mAP_stats[1]
+            best_score = ap50
             mAP_str = "\n"
             for mAP_format, mAP_value in zip(METRIC_FORMAT, mAP_stats):
                 mAP_str += f"{mAP_format} = {mAP_value:.3f}\n"
             logger.info(mAP_str)
             torch.save(model.state_dict(), args.weight_dir / "best.pt")
-    if best_mAP > 0:
+    if best_score > 0:
         logger.info(f"[Best mAP : Epoch{best_epoch}]{mAP_str}")
 
 
