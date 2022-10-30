@@ -73,15 +73,15 @@ def parse_args(make_dirs=True):
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
     parser.add_argument("--img_size", type=int, default=448, help="Model input size")
     parser.add_argument("--batch_size", type=int, default=64, help="Batch size")
-    parser.add_argument("--num_epochs", type=int, default=300, help="Number of training epochs")
+    parser.add_argument("--num_epochs", type=int, default=200, help="Number of training epochs")
     parser.add_argument("--warmup_epoch", type=int, default=1, help="Epochs for warming up training")
-    parser.add_argument("--init_lr", type=float, default=0.0001, help="Learning rate for inital training")
-    parser.add_argument("--base_lr", type=float, default=0.001, help="Base learning rate")
+    parser.add_argument("--init_lr", type=float, default=0.001, help="Learning rate for inital training")
+    parser.add_argument("--base_lr", type=float, default=0.01, help="Base learning rate")
     parser.add_argument("--momentum", type=float, default=0.9, help="Momentum")
     parser.add_argument("--weight_decay", type=float, default=0.0005, help="Weight decay")
     parser.add_argument("--lambda_coord", type=float, default=5.0, help="Lambda for box regression loss")
     parser.add_argument("--lambda_noobj", type=float, default=0.5, help="Lambda for no-objectness loss")
-    parser.add_argument("--conf_thres", type=float, default=0.1, help="Threshold to filter confidence score")
+    parser.add_argument("--conf_thres", type=float, default=0.01, help="Threshold to filter confidence score")
     parser.add_argument("--nms_thres", type=float, default=0.6, help="Threshold to filter Box IoU of NMS process")
     parser.add_argument("--rank", type=int, default=0, help="Process id for computation")
     parser.add_argument("--img_interval", type=int, default=5, help="Interval to log train/val image")
@@ -124,13 +124,13 @@ def main():
     model = YoloModel(num_classes=args.num_classes, num_boxes=2).cuda(args.rank)
     criterion = YoloLoss(num_classes=args.num_classes, lambda_coord=args.lambda_coord, lambda_noobj=args.lambda_noobj)
     optimizer = optim.SGD(model.parameters(), lr=args.init_lr, momentum=args.momentum, weight_decay=args.weight_decay)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[230, 270], gamma=0.1)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[75, 105], gamma=0.1)
 
     args.mAP_file_path = val_dataset.mAP_file_path
     args.cocoGt = COCO(annotation_file=args.mAP_file_path)
 
-    best_epoch = 0
-    best_score = 0
+    best_epoch, best_score = 0, 0
+    
     for epoch in range(args.num_epochs):
         train(args=args, dataloader=train_loader, model=model, criterion=criterion, optimizer=optimizer)
         mAP_stats = validate(args=args, dataloader=val_loader, model=model, epoch=epoch)
