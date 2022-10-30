@@ -13,8 +13,7 @@ class YoloHead(nn.Module):
         self.conv2 = Conv(in_channels//2, in_channels, kernel_size=3, padding=1)
         self.conv3 = Conv(in_channels, in_channels//2, kernel_size=1)
         self.conv4 = Conv(in_channels//2, in_channels, kernel_size=3, padding=1)
-        self.conv5 = nn.Conv2d(in_channels, self.num_attributes, kernel_size=1)
-        self.pool = nn.AdaptiveAvgPool2d(output_size=(7, 7))
+        self.conv5 = nn.Conv2d(512, self.num_attributes, kernel_size=1)
         self.apply(weight_init_kaiming_uniform)
 
 
@@ -24,7 +23,6 @@ class YoloHead(nn.Module):
         out = self.conv3(out)
         out = self.conv4(out)
         out = self.conv5(out)
-        out = self.pool(out)
         return out
 
 
@@ -32,12 +30,14 @@ class YoloHead(nn.Module):
 if __name__ == "__main__":
     from backbone import build_resnet18
 
-    input_size = 224
+    input_size = 448
     num_classes = 1
     backbone, feat_dims = build_resnet18(pretrained=True)
     head = YoloHead(in_channels=feat_dims, num_classes=num_classes, num_boxes=2)
 
     inp = torch.randn(1, 3, input_size, input_size)
-    out = head(backbone(inp))
+    out = backbone(inp)
+    print(out.shape)
+    out = head(out)
     print(out.shape)
 

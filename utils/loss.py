@@ -4,8 +4,8 @@ from torch import nn
 
 
 class YoloLoss():
-    def __init__(self, num_classes, lambda_coord=5.0, lambda_noobj=0.5):
-        self.grid_size = 7
+    def __init__(self, num_classes, grid_size, lambda_coord=5.0, lambda_noobj=0.5):
+        self.grid_size = grid_size
         self.lambda_coord = lambda_coord
         self.lambda_noobj = lambda_noobj
         self.num_attributes = (1 + 4) + num_classes
@@ -109,7 +109,7 @@ if __name__ == "__main__":
     from model import YoloModel
 
     yaml_path = ROOT / 'data' / 'toy.yaml'
-    input_size = 224
+    input_size = 448
     num_classes = 1
     batch_size = 2
     device = torch.device('cuda')
@@ -119,8 +119,8 @@ if __name__ == "__main__":
     train_dataset.load_transformer(transformer=transformer)
     train_loader = DataLoader(dataset=train_dataset, collate_fn=Dataset.collate_fn, batch_size=batch_size, shuffle=False, pin_memory=True, sampler=None)
     
-    model = YoloModel(num_classes=num_classes, num_boxes=2).to(device)
-    criterion = YoloLoss(num_classes=num_classes, lambda_coord=5.0, lambda_noobj=0.5)
+    model = YoloModel(input_size=input_size, num_classes=num_classes, num_boxes=2).to(device)
+    criterion = YoloLoss(num_classes=num_classes, grid_size=model.grid_size, lambda_coord=5.0, lambda_noobj=0.5)
     optimizer = optim.SGD(model.parameters(), lr=0.0001)
     optimizer.zero_grad()
 

@@ -121,10 +121,10 @@ def main():
     args.num_classes = len(args.class_list)
     args.color_list = generate_random_color(args.num_classes)
     
-    model = YoloModel(num_classes=args.num_classes, num_boxes=2).cuda(args.rank)
-    criterion = YoloLoss(num_classes=args.num_classes, lambda_coord=args.lambda_coord, lambda_noobj=args.lambda_noobj)
+    model = YoloModel(input_size=args.img_size, num_classes=args.num_classes, num_boxes=2).cuda(args.rank)
+    criterion = YoloLoss(num_classes=args.num_classes, grid_size=model.grid_size, lambda_coord=args.lambda_coord, lambda_noobj=args.lambda_noobj)
     optimizer = optim.SGD(model.parameters(), lr=args.init_lr, momentum=args.momentum, weight_decay=args.weight_decay)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[75, 105], gamma=0.1)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[150, 180], gamma=0.1)
 
     args.mAP_file_path = val_dataset.mAP_file_path
     args.cocoGt = COCO(annotation_file=args.mAP_file_path)

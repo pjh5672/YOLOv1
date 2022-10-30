@@ -1,3 +1,5 @@
+import math
+
 import torch
 from torch import nn
 
@@ -7,12 +9,18 @@ from head import YoloHead
 
 
 class YoloModel(nn.Module):
-    def __init__(self, num_classes, num_boxes=2):
+    def __init__(self, input_size, num_classes, num_boxes=2):
         super().__init__()
         self.num_boxes = num_boxes
         self.num_classes = num_classes
         self.backbone, feat_dims = build_resnet18(pretrained=True)
         self.head = YoloHead(in_channels=feat_dims, num_classes=num_classes, num_boxes=num_boxes)
+        self.set_grid_size(input_size=input_size)
+    
+
+    def set_grid_size(self, input_size=448):
+        out = self(torch.randn(1, 3, input_size, input_size))
+        self.grid_size = int(math.sqrt(out.shape[1]/self.num_boxes))
 
 
     def forward(self, x):
@@ -34,7 +42,7 @@ if __name__ == "__main__":
     inp = torch.randn(1, 3, input_size, input_size)
     device = torch.device('cpu')
 
-    model = YoloModel(num_classes=num_classes).to(device)
+    model = YoloModel(input_size=input_size, num_classes=num_classes).to(device)
     model.train()
     out = model(inp.to(device))
     print(out.shape)
