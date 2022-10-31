@@ -37,7 +37,7 @@ from val import validate, METRIC_FORMAT
 
 
 def train(args, dataloader, model, criterion, optimizer):
-    loss_type = ['multipart', 'obj', 'noobj', 'box', 'cls']
+    loss_type = ['multipart', 'obj', 'noobj', 'txty', 'twth', 'cls']
     losses = defaultdict(float)
 
     model.train()
@@ -73,7 +73,7 @@ def parse_args(make_dirs=True):
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
     parser.add_argument("--img_size", type=int, default=448, help="Model input size")
     parser.add_argument("--batch_size", type=int, default=64, help="Batch size")
-    parser.add_argument("--num_epochs", type=int, default=200, help="Number of training epochs")
+    parser.add_argument("--num_epochs", type=int, default=150, help="Number of training epochs")
     parser.add_argument("--warmup_epoch", type=int, default=1, help="Epochs for warming up training")
     parser.add_argument("--init_lr", type=float, default=0.001, help="Learning rate for inital training")
     parser.add_argument("--base_lr", type=float, default=0.01, help="Base learning rate")
@@ -121,16 +121,15 @@ def main():
     args.num_classes = len(args.class_list)
     args.color_list = generate_random_color(args.num_classes)
     
-    model = YoloModel(input_size=args.img_size, num_classes=args.num_classes, num_boxes=2).cuda(args.rank)
+    model = YoloModel(num_classes=args.num_classes, grid_size=7, num_boxes=2).cuda(args.rank)
     criterion = YoloLoss(num_classes=args.num_classes, grid_size=model.grid_size, lambda_coord=args.lambda_coord, lambda_noobj=args.lambda_noobj)
     optimizer = optim.SGD(model.parameters(), lr=args.init_lr, momentum=args.momentum, weight_decay=args.weight_decay)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[150, 180], gamma=0.1)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[75, 105], gamma=0.1)
 
     args.mAP_file_path = val_dataset.mAP_file_path
     args.cocoGt = COCO(annotation_file=args.mAP_file_path)
-
     best_epoch, best_score = 0, 0
-    
+
     for epoch in range(args.num_epochs):
         train(args=args, dataloader=train_loader, model=model, criterion=criterion, optimizer=optimizer)
         mAP_stats = validate(args=args, dataloader=val_loader, model=model, epoch=epoch)

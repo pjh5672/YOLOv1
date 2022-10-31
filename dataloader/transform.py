@@ -37,10 +37,10 @@ class AugmentTransform:
     def __init__(self, input_size):
         self.input_size = input_size
         self.flip = Albumentations(p_flipud=0.0, p_fliplr=0.5)
-        self.gain_h = 0.0
-        self.gain_s = 0.5
-        self.gain_v = 0.5
-        self.degrees = 0
+        self.gain_h = 0.015
+        self.gain_s = 0.6
+        self.gain_v = 0.4
+        self.degrees = 10
         self.translate = 0.2
         self.scale = 0.2
         self.perspective = 0.0
@@ -186,7 +186,7 @@ if __name__ == "__main__":
     from utils import visualize_target, generate_random_color, clip_box_coordinate
 
     yaml_path = ROOT / 'data' / 'toy.yaml'
-    input_size = 224
+    input_size = 448
     train_dataset = Dataset(yaml_path=yaml_path, phase='train')
     # transformer = BasicTransform(input_size=input_size)
     transformer = AugmentTransform(input_size=input_size)

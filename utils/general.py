@@ -1,7 +1,13 @@
 import os
 import cv2
+import torch
 import numpy as np
 
+
+
+def set_grid(grid_size):
+    grid_y, grid_x = torch.meshgrid((torch.arange(grid_size), torch.arange(grid_size)), indexing="ij")
+    return (grid_x, grid_y)
 
 
 def set_lr(optimizer, lr):

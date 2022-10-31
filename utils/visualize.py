@@ -1,6 +1,5 @@
 import random
 import cv2
-
 from general import transform_xcycwh_to_x1y1x2y2, scale_to_original
 
 

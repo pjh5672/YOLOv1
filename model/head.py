@@ -6,7 +6,7 @@ from element import Conv, weight_init_kaiming_uniform
 
 
 class YoloHead(nn.Module):
-    def __init__(self, in_channels, num_classes, num_boxes=2):
+    def __init__(self, in_channels, num_classes, grid_size=7, num_boxes=2):
         super().__init__()
         self.num_attributes = (1 + 4) * num_boxes + num_classes
         self.conv1 = Conv(in_channels, in_channels//2, kernel_size=1)
@@ -14,6 +14,7 @@ class YoloHead(nn.Module):
         self.conv3 = Conv(in_channels, in_channels//2, kernel_size=1)
         self.conv4 = Conv(in_channels//2, in_channels, kernel_size=3, padding=1)
         self.conv5 = nn.Conv2d(512, self.num_attributes, kernel_size=1)
+        self.pool = nn.AdaptiveAvgPool2d(output_size=(grid_size, grid_size))
         self.apply(weight_init_kaiming_uniform)
 
 
@@ -23,6 +24,7 @@ class YoloHead(nn.Module):
         out = self.conv3(out)
         out = self.conv4(out)
         out = self.conv5(out)
+        out = self.pool(out)
         return out
 
 

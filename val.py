@@ -64,7 +64,7 @@ def validate(args, dataloader, model, epoch=0):
 
         for j in range(len(filenames)):
             prediction = predictions[j].cpu().numpy()
-            prediction[:, 1:5] = transform_xcycwh_to_x1y1x2y2(boxes=prediction[:, 1:5], clip_max=1)
+            prediction[:, 1:5] = transform_xcycwh_to_x1y1x2y2(boxes=prediction[:, 1:5], clip_max=1.0)
             prediction = filter_confidence(prediction=prediction, conf_threshold=args.conf_thres)
             prediction = run_NMS(prediction=prediction, iou_threshold=args.nms_thres)
 
