@@ -16,7 +16,7 @@ ROOT = FILE.parents[1]
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from utils import clip_box_coordinate, transform_xcycwh_to_x1y1wh
+from utils import clip_box_coordinate, transform_xcycwh_to_x1y1wh, check_img_size
 
 
 
@@ -43,26 +43,29 @@ class Dataset:
 
 
     def __getitem__(self, index):
-        filename, image, label = self.get_GT_item(index)
-        input_tensor, label = self.transformer(image=image, label=label)
+        filename, image, label, img_size0, img_size1 = self.get_GT_item(index)
+        input_tensor, label, pad_size1 = self.transformer(image=image, label=label)
         label[:, 1:5] = clip_box_coordinate(label[:, 1:5])
         label = torch.from_numpy(label)
-        ori_img_size = image.shape
-        return filename, input_tensor, label, ori_img_size
+        shape = (img_size0, img_size1, pad_size1)
+        return filename, input_tensor, label, shape
 
     
     def get_GT_item(self, index):
-        filename, image = self.get_image(index)
+        filename, image, img_size0, img_size1 = self.get_image(index)
         label = self.get_label(index)
         label = self.check_no_label(label)
-        return filename, image, label
+        return filename, image, label, img_size0, img_size1
 
 
     def get_image(self, index):
         filename = self.image_paths[index].split(os.sep)[-1]
         image = cv2.imread(self.image_paths[index])
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        return filename, image
+        h0, w0 = image.shape[:2]
+        h1, w1 = check_img_size(img_size=(h0, w0), s=32)
+        image = cv2.resize(image, dsize=(w1, h1))
+        return filename, image, (h0, w0), (h1, w1)
 
 
     def get_label(self, index):
@@ -102,18 +105,18 @@ class Dataset:
             class_id2category = self.class_list
             category2class_id = {t:l for l,t in class_id2category.items()}
     
-            cocoAPI_formatter = {}
-            cocoAPI_formatter["imageToid"] = {}
-            cocoAPI_formatter["images"] = []
-            cocoAPI_formatter["annotations"] = []
-            cocoAPI_formatter["categories"] = []
+            eval_formatter = {}
+            eval_formatter["imageToid"] = {}
+            eval_formatter["images"] = []
+            eval_formatter["annotations"] = []
+            eval_formatter["categories"] = []
 
             lbl_id = 0
             for i in tqdm(range(len(self))):
-                filename, image, label = self.get_GT_item(i)
-                img_h, img_w = image.shape[:2]
-                cocoAPI_formatter["imageToid"][filename] = i
-                cocoAPI_formatter["images"].append({"id": i, "width": img_w, "height": img_h})
+                filename, image, label, img_size0, _ = self.get_GT_item(i)
+                img_h, img_w = img_size0
+                eval_formatter["imageToid"][filename] = i
+                eval_formatter["images"].append({"id": i, "width": img_w, "height": img_h})
                 
                 label[:, 1:5] = transform_xcycwh_to_x1y1wh(label[:, 1:5])
                 label[:, [1,3]] *= img_w
@@ -127,29 +130,25 @@ class Dataset:
                     x["iscrowd"] = 0
                     x["category_id"] = int(label[j][0])
                     x["segmentation"] = []
-                    cocoAPI_formatter["annotations"].append(x)
+                    eval_formatter["annotations"].append(x)
                     lbl_id += 1
 
             for i, cate_name in class_id2category.items():
-                cocoAPI_formatter["categories"].append({"id": i, "supercategory": "", "name": cate_name})
+                eval_formatter["categories"].append({"id": i, "supercategory": "", "name": cate_name})
 
             with open(self.mAP_file_path, "w") as outfile:
-                json.dump(cocoAPI_formatter, outfile)
+                json.dump(eval_formatter, outfile)
 
 
     @staticmethod
     def collate_fn(minibatch):
-        filenames = []
-        images = []
-        labels = []
-        ori_img_sizes = []
-        
+        filenames, images, labels, shapes = [], [], [], []
         for index, items in enumerate(minibatch):
             filenames.append(items[0])
             images.append(items[1])
             labels.append(items[2])
-            ori_img_sizes.append(items[3])
-        return filenames, torch.stack(images, dim=0), labels, ori_img_sizes
+            shapes.append(items[3])
+        return filenames, torch.stack(images, dim=0), labels, shapes
 
 
 
@@ -158,7 +157,7 @@ if __name__ == "__main__":
     ROOT = FILE.parents[1]
     
     yaml_path = ROOT / 'data' / 'toy.yaml'
-    input_size = 224
+    input_size = 448
     transformer = BasicTransform(input_size=input_size)
     # transformer = AugmentTransform(input_size=input_size)
     
@@ -168,9 +167,9 @@ if __name__ == "__main__":
     val_dataset.load_transformer(transformer=transformer)
 
     for index, minibatch in enumerate(train_dataset):
-        filename, image, label, ori_img_size = train_dataset[index]
-        print(filename, label, image.shape, ori_img_size)
+        filename, image, label, shapes = train_dataset[index]
+        print(filename, label, image.shape, shapes)
     
     for index, minibatch in enumerate(val_dataset):
-        filename, image, label, ori_img_size = val_dataset[index]
-        print(filename, label, image.shape, ori_img_size)
+        filename, image, label, shapes = val_dataset[index]
+        print(filename, label, image.shape, shapes)

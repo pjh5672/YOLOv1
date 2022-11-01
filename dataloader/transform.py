@@ -14,7 +14,7 @@ ROOT = FILE.parents[1]
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from utils import transform_xcycwh_to_x1y1x2y2, transform_x1y1x2y2_to_xcycwh, scale_to_original, scale_to_norm
+from utils import transform_xcycwh_to_x1y1x2y2, transform_x1y1x2y2_to_xcycwh, scale_to_original, scale_to_norm, clip_box_coordinate
 
 
 IMAGENET_MEAN = 0.485, 0.456, 0.406  # IMAGENET MEAN on RGB space
@@ -25,42 +25,41 @@ class BasicTransform:
     def __init__(self, input_size):
         self.input_size = input_size
 
-
     def __call__(self, image, label):
-        image, label = to_square_image(image, label)
+        image, label, pad_size1 = to_letterbox_image(image, label)
         image = cv2.resize(image, dsize=(self.input_size, self.input_size))
         tensor = to_tensor(image)
-        return tensor, label
+        return tensor, label, pad_size1
 
 
 class AugmentTransform:
     def __init__(self, input_size):
         self.input_size = input_size
         self.flip = Albumentations(p_flipud=0.0, p_fliplr=0.5)
-        self.gain_h = 0.015
-        self.gain_s = 0.6
-        self.gain_v = 0.4
-        self.degrees = 10
+        self.gain_h = 0.0
+        self.gain_s = 0.5
+        self.gain_v = 0.5
+        self.degrees = 0
         self.translate = 0.2
         self.scale = 0.2
-        self.perspective = 0.0
+        self.perspective = 0
     
 
     def __call__(self, image, label):
-        img_h, img_w = image.shape[:2]
-        size = max(img_h, img_w) if max(img_h, img_w) > self.input_size else self.input_size
         image, label = self.flip(image=image, label=label)
         image = augment_hsv(image, gain_h=self.gain_h, gain_s=self.gain_s, gain_v=self.gain_v)
+        image, label, pad_size1 = to_letterbox_image(image, label)
+        img_h, img_w, _ = image.shape
+        max_size = max(img_h, img_w)
+        size = max_size if max_size > self.input_size else self.input_size
         label[:, 1:5] = transform_xcycwh_to_x1y1x2y2(label[:, 1:5])
         label[:, 1:5] = scale_to_original(label[:, 1:5], scale_w=img_w, scale_h=img_h)
-        image, label = random_perspective(image, label, size=size, 
-                                          degrees=self.degrees, translate=self.translate, 
-                                          scale=self.scale, perspective=self.perspective)
+        image, label = random_perspective(image, label, size=size, degrees=self.degrees, translate=self.translate, scale=self.scale, perspective=self.perspective)
         label[:, 1:5] = scale_to_norm(label[:, 1:5], image_w=size, image_h=size)
         label[:, 1:5] = transform_x1y1x2y2_to_xcycwh(label[:, 1:5])
         image = cv2.resize(image, dsize=(self.input_size, self.input_size))
         tensor = to_tensor(image)
-        return tensor, label
+        return tensor, label, pad_size1
 
 
 def to_tensor(image, mean=IMAGENET_MEAN, std=IMAGENET_STD):
@@ -80,7 +79,7 @@ def to_image(tensor, mean=IMAGENET_MEAN, std=IMAGENET_STD):
     return image
 
 
-def to_square_image(image, label):
+def to_letterbox_image(image, label):
     pad_h, pad_w = 0, 0
     img_h, img_w, img_c = image.shape
     dtype = image.dtype
@@ -92,10 +91,12 @@ def to_square_image(image, label):
         pad_w = max_size - img_w
     
     square_image = np.zeros(shape=(img_h + pad_h, img_w + pad_w, img_c), dtype=dtype)
-    square_image[0:img_h, 0:img_w, :] = image
-    label[:, [1,3]] *= (img_w / (img_w + pad_w))
-    label[:, [2,4]] *= (img_h / (img_h + pad_h))
-    return square_image, label
+    square_image[pad_h//2:img_h+pad_h//2, pad_w//2:img_w+pad_w//2, :] = image
+    label[:, 1] = ((label[:, 1] * img_w) + pad_w//2) / max_size
+    label[:, 2] = ((label[:, 2] * img_h) + pad_h//2) / max_size
+    label[:, 3] *= img_w / max_size
+    label[:, 4] *= img_h / max_size
+    return square_image, label, (pad_h, pad_w)
 
 
 class Albumentations:
@@ -111,6 +112,7 @@ class Albumentations:
 
 
     def __call__(self, image, label):
+        label[:, 1:5] = clip_box_coordinate(label[:, 1:5])
         transform_data = self.transform(image=image, bboxes=label[:, 1:5], class_ids=label[:, 0])
         image = transform_data['image']
         bboxes = np.array(transform_data['bboxes'], dtype=np.float32)
@@ -183,7 +185,7 @@ def box_candidates(box1, box2=None, wh_thr=4, ar_thr=20, area_thr=0.05, eps=1e-1
 
 if __name__ == "__main__":
     from dataset import Dataset
-    from utils import visualize_target, generate_random_color, clip_box_coordinate
+    from utils import visualize_target, generate_random_color
 
     yaml_path = ROOT / 'data' / 'toy.yaml'
     input_size = 448
@@ -195,9 +197,8 @@ if __name__ == "__main__":
     color_list = generate_random_color(len(class_list))
 
     index = np.random.randint(0, len(train_dataset))
-    filename, image, label = train_dataset.get_GT_item(index)
-    input_tensor, label = transformer(image=image, label=label)
+    filename, image, label, img_size0, img_size1 = train_dataset.get_GT_item(index)
+    input_tensor, label, pad_size1 = transformer(image=image, label=label)
     image = to_image(input_tensor)
     image_with_bbox = visualize_target(image, label, class_list, color_list)
-    print(filename, input_tensor.shape, label)
-    cv2.imwrite('./asset/train-data.png', image_with_bbox)
+    cv2.imwrite('./asset/train-data.jpg', image_with_bbox)

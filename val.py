@@ -25,7 +25,7 @@ except:
 
 from dataloader import Dataset, BasicTransform, to_image
 from model import YoloModel
-from utils import *
+from utils import generate_random_color, transform_xcycwh_to_x1y1x2y2, filter_confidence, run_NMS, letterbox_to_origin, transform_x1y1x2y2_to_x1y1wh, visualize_prediction, imwrite
 
 
 METRIC_FORMAT = [
@@ -51,14 +51,11 @@ def validate(args, dataloader, model, epoch=0):
     with open(args.mAP_file_path, mode="r") as f:
         mAP_json = json.load(f)
     
-    cocoPred = []
-    check_images = []
-    check_preds = []
-    check_results = []
+    cocoPred, check_images, check_preds, check_results = [], [], [], []
     mAP_stats = None
     imageToid = mAP_json["imageToid"]
     for i, minibatch in enumerate(dataloader):
-        filenames, images, labels, ori_img_sizes = minibatch
+        filenames, images, labels, shapes = minibatch
         predictions = model(images.cuda(args.rank, non_blocking=True))
         predictions[..., 5:] *= predictions[..., [0]]
 
@@ -74,14 +71,13 @@ def validate(args, dataloader, model, epoch=0):
                 
             if len(prediction) > 0:
                 filename = filenames[j]
-                ori_img_size = ori_img_sizes[j]
+                img_size0, img_size1, pad_size1 = shapes[j]
                 cls_id = prediction[:, [0]]
                 conf = prediction[:, [-1]]
-                box_x1y1x2y2 = square_to_original(boxes=prediction[:, 1:5], input_size=1, origin_size=ori_img_size)
+                box_x1y1x2y2 = letterbox_to_origin(boxes=prediction[:, 1:5], img_size0=img_size0, img_size1=img_size1, pad_size1=pad_size1)
                 box_x1y1wh = transform_x1y1x2y2_to_x1y1wh(boxes=box_x1y1x2y2)
                 img_id = np.array((imageToid[filename],) * len(cls_id))[:, np.newaxis]
                 cocoPred.append(np.concatenate((img_id, box_x1y1wh, conf, cls_id), axis=1))
-
 
     if (epoch % args.img_interval == 0) and args.img_log_dir:
         for k in range(len(check_images)):
@@ -116,8 +112,6 @@ def parse_args(make_dirs=True):
     parser.add_argument("--img_interval", type=int, default=5, help="Interval to log train/val image")
     parser.add_argument("--img_log_dir", nargs='?', default = None)
     args = parser.parse_args()
-
-    ROOT = Path(__file__).resolve().parents[0]
     args.data = ROOT / "data" / args.data
     args.exp_path = ROOT / 'experiment' / args.exp_name
     args.ckpt_path = args.exp_path / 'weight' / args.ckpt_name

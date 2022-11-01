@@ -1,8 +1,19 @@
 import os
 import cv2
+import math
 import torch
 import numpy as np
 
+
+def make_divisible(x, divisor=32):
+    return math.ceil(x / divisor) * divisor
+
+
+def check_img_size(img_size, s=32):
+    ori_h, ori_w = img_size
+    new_h = make_divisible(ori_h, divisor=s)
+    new_w = make_divisible(ori_w, divisor=s)
+    return new_h, new_w
 
 
 def set_grid(grid_size):
@@ -27,12 +38,16 @@ def scale_to_norm(boxes, image_w, image_h):
     return boxes
 
 
-def square_to_original(boxes, input_size, origin_size):
-    img_h, img_w, _ = origin_size
-    boxes /= input_size
-    boxes[:, [0,2]] *= (max(origin_size) / img_w)
-    boxes[:, [1,3]] *= (max(origin_size) / img_h)
-    box_x1y1x2y2 = scale_to_original(boxes, scale_w=img_w, scale_h=img_h)
+def letterbox_to_origin(boxes, img_size0, img_size1, pad_size1):
+    # boxes format : x1y1x2y2
+    h0, w0 = img_size0
+    h1, w1 = img_size1
+    pad_h, pad_w = pad_size1
+    boxes[:, 0] = ((boxes[:, 0] * max(h1, w1)) - pad_w//2) / w1
+    boxes[:, 1] = ((boxes[:, 1] * max(h1, w1)) - pad_h//2) / h1
+    boxes[:, 2] = ((boxes[:, 2] * max(h1, w1)) - pad_w//2) / w1
+    boxes[:, 3] = ((boxes[:, 3] * max(h1, w1)) - pad_h//2) / h1
+    box_x1y1x2y2 = scale_to_original(boxes, scale_w=w0, scale_h=h0)
     return box_x1y1x2y2
 
 

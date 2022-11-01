@@ -43,10 +43,10 @@ def visualize(image, label, class_list, color_list, show_class=False, show_score
 
 
 def visualize_target(image, label, class_list, color_list):
-    input_size = image.shape[0]
+    img_h, img_w, _ = image.shape
     label_xcycwh = label.copy()
     label_xcycwh[:, 1:5] = transform_xcycwh_to_x1y1x2y2(label_xcycwh[:, 1:5])
-    label_xcycwh[:, 1:5] = scale_to_original(label_xcycwh[:, 1:5], scale_w=input_size, scale_h=input_size)
+    label_xcycwh[:, 1:5] = scale_to_original(label_xcycwh[:, 1:5], scale_w=img_w, scale_h=img_h)
     image = visualize(image, label_xcycwh, class_list, color_list, show_class=True, show_score=False)
     return image[...,::-1]
 

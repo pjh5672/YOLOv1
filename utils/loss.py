@@ -119,7 +119,6 @@ if __name__ == "__main__":
 
     yaml_path = ROOT / 'data' / 'toy.yaml'
     input_size = 448
-    num_classes = 1
     batch_size = 2
     device = torch.device('cuda')
 
@@ -127,16 +126,17 @@ if __name__ == "__main__":
     train_dataset = Dataset(yaml_path=yaml_path, phase='train')
     train_dataset.load_transformer(transformer=transformer)
     train_loader = DataLoader(dataset=train_dataset, collate_fn=Dataset.collate_fn, batch_size=batch_size, shuffle=False, pin_memory=True, sampler=None)
-    
+    num_classes = len(train_dataset.class_list)
+
     model = YoloModel(num_classes=num_classes, grid_size=7, num_boxes=2).to(device)
     criterion = YoloLoss(num_classes=num_classes, grid_size=model.grid_size, lambda_coord=5.0, lambda_noobj=0.5)
     optimizer = optim.SGD(model.parameters(), lr=0.0001)
     optimizer.zero_grad()
 
-    for epoch in range(10):
+    for epoch in range(20):
         model.train()
         for index, minibatch in enumerate(train_loader):
-            filenames, images, labels, ori_img_sizes = minibatch
+            filenames, images, labels, shapes = minibatch
             predictions = model(images.to(device))
             loss = criterion(predictions=predictions, labels=labels)
             loss[0].backward()
