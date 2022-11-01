@@ -20,7 +20,7 @@ class YoloLoss():
         self.lambda_coord = lambda_coord
         self.lambda_noobj = lambda_noobj
         self.num_attributes = (1 + 4) + num_classes
-        self.mse_loss = nn.MSELoss(reduction="mean")
+        self.mse_loss = nn.MSELoss(reduction="sum")
         grid_x, grid_y = set_grid(grid_size=self.grid_size)
         self.grid_x = grid_x.contiguous().view((1, -1))
         self.grid_y = grid_y.contiguous().view((1, -1))
@@ -29,6 +29,7 @@ class YoloLoss():
     def __call__(self, predictions, labels):
         self.device = predictions.device
         self.batch_size = predictions.shape[0]
+        
         targets = self.build_batch_target(labels).to(self.device)
 
         with torch.no_grad():
@@ -55,6 +56,12 @@ class YoloLoss():
         txty_loss = self.mse_loss(pred_box_txty, target_box_txty)
         twth_loss = self.mse_loss(pred_box_twth.sign() * (pred_box_twth.abs() + 1e-8).sqrt(), (target_box_twth + 1e-8).sqrt())
         cls_loss = self.mse_loss(pred_cls, target_cls)
+        
+        obj_loss /= self.batch_size
+        noobj_loss /= self.batch_size
+        txty_loss /= self.batch_size
+        twth_loss /= self.batch_size
+        cls_loss /= self.batch_size
         multipart_loss = obj_loss + self.lambda_noobj * noobj_loss + self.lambda_coord * (txty_loss + twth_loss) + cls_loss
         return multipart_loss, obj_loss, noobj_loss, txty_loss, twth_loss, cls_loss
 
@@ -69,8 +76,10 @@ class YoloLoss():
                 cls_id = item[0].long()
                 grid_i = (item[1] * self.grid_size).long()
                 grid_j = (item[2] * self.grid_size).long()
-                tx = (item[1] * self.grid_size) - grid_i
-                ty = (item[2] * self.grid_size) - grid_j
+                # tx = (item[1] * self.grid_size) - grid_i
+                # ty = (item[2] * self.grid_size) - grid_j
+                tx = item[1] % (1 / self.grid_size)
+                ty = item[2] % (1 / self.grid_size)
                 tw = item[3]
                 th = item[4]
                 target[grid_j, grid_i, 0] = 1.0
@@ -98,8 +107,10 @@ class YoloLoss():
     
 
     def transform_cxcywh_to_x1y1x2y2(self, boxes):
-        xc = (boxes[..., 0] + self.grid_x.to(self.device)) / self.grid_size
-        yc = (boxes[..., 1] + self.grid_y.to(self.device)) / self.grid_size
+        # xc = (boxes[..., 0] + self.grid_x.to(self.device)) / self.grid_size
+        # yc = (boxes[..., 1] + self.grid_y.to(self.device)) / self.grid_size
+        xc = boxes[..., 0] + (self.grid_x / self.grid_size).to(self.device)
+        yc = boxes[..., 1] + (self.grid_y / self.grid_size).to(self.device)
         w = boxes[..., 2]
         h = boxes[..., 3]
         x1 = xc - w/2
@@ -133,7 +144,7 @@ if __name__ == "__main__":
     optimizer = optim.SGD(model.parameters(), lr=0.0001)
     optimizer.zero_grad()
 
-    for epoch in range(10):
+    for epoch in range(15):
         model.train()
         for index, minibatch in enumerate(train_loader):
             filenames, images, labels, ori_img_sizes = minibatch

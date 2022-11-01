@@ -73,7 +73,7 @@ def parse_args(make_dirs=True):
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
     parser.add_argument("--img_size", type=int, default=448, help="Model input size")
     parser.add_argument("--batch_size", type=int, default=64, help="Batch size")
-    parser.add_argument("--num_epochs", type=int, default=150, help="Number of training epochs")
+    parser.add_argument("--num_epochs", type=int, default=200, help="Number of training epochs")
     parser.add_argument("--warmup_epoch", type=int, default=1, help="Epochs for warming up training")
     parser.add_argument("--init_lr", type=float, default=0.001, help="Learning rate for inital training")
     parser.add_argument("--base_lr", type=float, default=0.01, help="Base learning rate")
@@ -84,6 +84,7 @@ def parse_args(make_dirs=True):
     parser.add_argument("--conf_thres", type=float, default=0.01, help="Threshold to filter confidence score")
     parser.add_argument("--nms_thres", type=float, default=0.6, help="Threshold to filter Box IoU of NMS process")
     parser.add_argument("--rank", type=int, default=0, help="Process id for computation")
+    parser.add_argument("--eval_interval", type=int, default=5, help="Interval to evaluation")
     parser.add_argument("--img_interval", type=int, default=5, help="Interval to log train/val image")
     args = parser.parse_args()
     
@@ -124,7 +125,7 @@ def main():
     model = YoloModel(num_classes=args.num_classes, grid_size=7, num_boxes=2).cuda(args.rank)
     criterion = YoloLoss(num_classes=args.num_classes, grid_size=model.grid_size, lambda_coord=args.lambda_coord, lambda_noobj=args.lambda_noobj)
     optimizer = optim.SGD(model.parameters(), lr=args.init_lr, momentum=args.momentum, weight_decay=args.weight_decay)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[75, 105], gamma=0.1)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[150, 175], gamma=0.1)
 
     args.mAP_file_path = val_dataset.mAP_file_path
     args.cocoGt = COCO(annotation_file=args.mAP_file_path)
@@ -132,19 +133,19 @@ def main():
 
     for epoch in range(args.num_epochs):
         train(args=args, dataloader=train_loader, model=model, criterion=criterion, optimizer=optimizer)
-        mAP_stats = validate(args=args, dataloader=val_loader, model=model, epoch=epoch)
         scheduler.step()
-
         torch.save(model.state_dict(), args.weight_dir / "last.pt")
-        ap95, ap50 = mAP_stats[:2]
-        if (mAP_stats is not None) and (ap50 > best_score):
-            best_epoch = epoch
-            best_score = ap50
-            mAP_str = "\n"
-            for mAP_format, mAP_value in zip(METRIC_FORMAT, mAP_stats):
-                mAP_str += f"{mAP_format} = {mAP_value:.3f}\n"
-            logger.info(mAP_str)
-            torch.save(model.state_dict(), args.weight_dir / "best.pt")
+        if epoch % args.eval_interval == 1:
+            mAP_stats = validate(args=args, dataloader=val_loader, model=model, epoch=epoch)
+            if mAP_stats is not None:
+                ap95, ap50 = mAP_stats[:2]
+                if ap50 > best_score:
+                    best_epoch, best_score = epoch, ap50
+                    mAP_str = "\n"
+                    for mAP_format, mAP_value in zip(METRIC_FORMAT, mAP_stats):
+                        mAP_str += f"{mAP_format} = {mAP_value:.3f}\n"
+                    logger.info(mAP_str)
+                    torch.save(model.state_dict(), args.weight_dir / "best.pt")
     if best_score > 0:
         logger.info(f"[Best mAP : Epoch{best_epoch}]{mAP_str}")
 

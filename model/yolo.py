@@ -48,8 +48,10 @@ class YoloModel(nn.Module):
 
 
     def transform_pred_box(self, pred_box):
-        xc = (pred_box[..., 0] + self.grid_x.to(self.device)) / self.grid_size
-        yc = (pred_box[..., 1] + self.grid_y.to(self.device)) / self.grid_size
+        # xc = (pred_box[..., 0] + self.grid_x.to(self.device)) / self.grid_size
+        # yc = (pred_box[..., 1] + self.grid_y.to(self.device)) / self.grid_size
+        xc = pred_box[..., 0] + (self.grid_x / self.grid_size).to(self.device)
+        yc = pred_box[..., 1] + (self.grid_y / self.grid_size).to(self.device)
         w = pred_box[..., 2]
         h = pred_box[..., 3]
         return torch.stack((xc, yc, w, h), dim=-1)
