@@ -130,7 +130,6 @@ def parse_args(make_dirs=True):
 
 def main():
     args = parse_args(make_dirs=True)
-
     val_dataset = Dataset(yaml_path=args.data, phase='val')
     val_transformer = BasicTransform(input_size=args.img_size)
     val_dataset.load_transformer(transformer=val_transformer)

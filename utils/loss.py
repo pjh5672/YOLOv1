@@ -98,8 +98,8 @@ class YoloLoss():
     
 
     def transform_cxcywh_to_x1y1x2y2(self, boxes):
-        xc = boxes[..., 0] + self.grid_x.to(self.device)
-        yc = boxes[..., 1] + self.grid_y.to(self.device)
+        xc = (boxes[..., 0] + self.grid_x.to(self.device)) / self.grid_size
+        yc = (boxes[..., 1] + self.grid_y.to(self.device)) / self.grid_size
         w = boxes[..., 2]
         h = boxes[..., 3]
         x1 = xc - w/2
