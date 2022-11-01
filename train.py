@@ -84,7 +84,6 @@ def parse_args(make_dirs=True):
     parser.add_argument("--conf_thres", type=float, default=0.01, help="Threshold to filter confidence score")
     parser.add_argument("--nms_thres", type=float, default=0.6, help="Threshold to filter Box IoU of NMS process")
     parser.add_argument("--rank", type=int, default=0, help="Process id for computation")
-    parser.add_argument("--eval_interval", type=int, default=5, help="Interval to evaluation")
     parser.add_argument("--img_interval", type=int, default=5, help="Interval to log train/val image")
     args = parser.parse_args()
     
@@ -133,22 +132,20 @@ def main():
     
     for epoch in range(args.num_epochs):
         train(args=args, dataloader=train_loader, model=model, criterion=criterion, optimizer=optimizer)
+        mAP_stats = validate(args=args, dataloader=val_loader, model=model, epoch=epoch)
         scheduler.step()
         torch.save(model.state_dict(), args.weight_dir / "last.pt")
 
-        if epoch % args.eval_interval == 1:
-            mAP_stats = validate(args=args, dataloader=val_loader, model=model, epoch=epoch)
+        if mAP_stats is not None:
+            ap95, ap50 = mAP_stats[:2]
+            mAP_str = "\n"
+            for mAP_format, mAP_value in zip(METRIC_FORMAT, mAP_stats):
+                mAP_str += f"{mAP_format} = {mAP_value:.3f}\n"
+            logger.info(mAP_str)
 
-            if mAP_stats is not None:
-                ap95, ap50 = mAP_stats[:2]
-                mAP_str = "\n"
-                for mAP_format, mAP_value in zip(METRIC_FORMAT, mAP_stats):
-                    mAP_str += f"{mAP_format} = {mAP_value:.3f}\n"
-                logger.info(mAP_str)
-
-                if ap50 > best_score:
-                    best_epoch, best_score, best_mAP_str = epoch, ap50, mAP_str
-                    torch.save(model.state_dict(), args.weight_dir / "best.pt")
+            if ap50 > best_score:
+                best_epoch, best_score, best_mAP_str = epoch, ap50, mAP_str
+                torch.save(model.state_dict(), args.weight_dir / "best.pt")
     
     if best_score > 0:
         logger.info(f"[Best mAP : Epoch{best_epoch}]{best_mAP_str}")
