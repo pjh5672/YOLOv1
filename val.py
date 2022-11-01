@@ -52,9 +52,7 @@ def validate(args, dataloader, model, epoch=0):
         mAP_json = json.load(f)
     
     cocoPred = []
-    check_images = []
-    check_preds = []
-    check_results = []
+    check_images, check_preds, check_results = [], [], []
     mAP_stats = None
     imageToid = mAP_json["imageToid"]
     for i, minibatch in enumerate(dataloader):
@@ -81,7 +79,6 @@ def validate(args, dataloader, model, epoch=0):
                 box_x1y1wh = transform_x1y1x2y2_to_x1y1wh(boxes=box_x1y1x2y2)
                 img_id = np.array((imageToid[filename],) * len(cls_id))[:, np.newaxis]
                 cocoPred.append(np.concatenate((img_id, box_x1y1wh, conf, cls_id), axis=1))
-
 
     if (epoch % args.img_interval == 0) and args.img_log_dir:
         for k in range(len(check_images)):
