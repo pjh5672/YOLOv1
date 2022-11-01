@@ -138,16 +138,18 @@ def main():
 
         if epoch % args.eval_interval == 1:
             mAP_stats = validate(args=args, dataloader=val_loader, model=model, epoch=epoch)
+
             if mAP_stats is not None:
                 ap95, ap50 = mAP_stats[:2]
                 mAP_str = "\n"
                 for mAP_format, mAP_value in zip(METRIC_FORMAT, mAP_stats):
                     mAP_str += f"{mAP_format} = {mAP_value:.3f}\n"
                 logger.info(mAP_str)
-                
+
                 if ap50 > best_score:
                     best_epoch, best_score, best_mAP_str = epoch, ap50, mAP_str
                     torch.save(model.state_dict(), args.weight_dir / "best.pt")
+    
     if best_score > 0:
         logger.info(f"[Best mAP : Epoch{best_epoch}]{best_mAP_str}")
 
