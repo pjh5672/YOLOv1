@@ -20,7 +20,7 @@ class YoloLoss():
         self.lambda_coord = lambda_coord
         self.lambda_noobj = lambda_noobj
         self.num_attributes = (1 + 4) + num_classes
-        self.mse_loss = nn.MSELoss(reduction="sum")
+        self.mse_loss = nn.MSELoss(reduction="mean")
         grid_x, grid_y = set_grid(grid_size=self.grid_size)
         self.grid_x = grid_x.contiguous().view((1, -1))
         self.grid_y = grid_y.contiguous().view((1, -1))
@@ -56,12 +56,6 @@ class YoloLoss():
         txty_loss = self.mse_loss(pred_box_txty, target_box_txty)
         twth_loss = self.mse_loss(pred_box_twth.sign() * (pred_box_twth.abs() + 1e-8).sqrt(), (target_box_twth + 1e-8).sqrt())
         cls_loss = self.mse_loss(pred_cls, target_cls)
-        
-        obj_loss /= self.batch_size
-        noobj_loss /= self.batch_size
-        txty_loss /= self.batch_size
-        twth_loss /= self.batch_size
-        cls_loss /= self.batch_size
         multipart_loss = obj_loss + self.lambda_noobj * noobj_loss + self.lambda_coord * (txty_loss + twth_loss) + cls_loss
         return multipart_loss, obj_loss, noobj_loss, txty_loss, twth_loss, cls_loss
 
