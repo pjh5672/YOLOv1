@@ -72,8 +72,6 @@ class YoloLoss():
                 grid_j = (item[2] * self.grid_size).long()
                 tx = (item[1] * self.grid_size) - grid_i
                 ty = (item[2] * self.grid_size) - grid_j
-                # tx = item[1] % (1 / self.grid_size)
-                # ty = item[2] % (1 / self.grid_size)
                 tw = item[3]
                 th = item[4]
                 target[grid_j, grid_i, 0] = 1.0
@@ -103,8 +101,6 @@ class YoloLoss():
     def transform_cxcywh_to_x1y1x2y2(self, boxes):
         xc = (boxes[..., 0] + self.grid_x.to(self.device)) / self.grid_size
         yc = (boxes[..., 1] + self.grid_y.to(self.device)) / self.grid_size
-        # xc = boxes[..., 0] + (self.grid_x / self.grid_size).to(self.device)
-        # yc = boxes[..., 1] + (self.grid_y / self.grid_size).to(self.device)
         w = boxes[..., 2]
         h = boxes[..., 3]
         x1 = xc - w/2

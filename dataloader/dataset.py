@@ -47,8 +47,8 @@ class Dataset:
         input_tensor, label = self.transformer(image=image, label=label)
         label[:, 1:5] = clip_box_coordinate(label[:, 1:5])
         label = torch.from_numpy(label)
-        ori_img_size = image.shape
-        return filename, input_tensor, label, ori_img_size
+        shape = image.shape
+        return filename, input_tensor, label, shape
 
     
     def get_GT_item(self, index):
@@ -100,20 +100,19 @@ class Dataset:
         
         if not self.mAP_file_path.is_file():
             class_id2category = self.class_list
-            category2class_id = {t:l for l,t in class_id2category.items()}
     
-            cocoAPI_formatter = {}
-            cocoAPI_formatter["imageToid"] = {}
-            cocoAPI_formatter["images"] = []
-            cocoAPI_formatter["annotations"] = []
-            cocoAPI_formatter["categories"] = []
+            mAP_file_formatter = {}
+            mAP_file_formatter["imageToid"] = {}
+            mAP_file_formatter["images"] = []
+            mAP_file_formatter["annotations"] = []
+            mAP_file_formatter["categories"] = []
 
             lbl_id = 0
             for i in tqdm(range(len(self))):
                 filename, image, label = self.get_GT_item(i)
                 img_h, img_w = image.shape[:2]
-                cocoAPI_formatter["imageToid"][filename] = i
-                cocoAPI_formatter["images"].append({"id": i, "width": img_w, "height": img_h})
+                mAP_file_formatter["imageToid"][filename] = i
+                mAP_file_formatter["images"].append({"id": i, "width": img_w, "height": img_h})
                 
                 label[:, 1:5] = transform_xcycwh_to_x1y1wh(label[:, 1:5])
                 label[:, [1,3]] *= img_w
@@ -127,14 +126,14 @@ class Dataset:
                     x["iscrowd"] = 0
                     x["category_id"] = int(label[j][0])
                     x["segmentation"] = []
-                    cocoAPI_formatter["annotations"].append(x)
+                    mAP_file_formatter["annotations"].append(x)
                     lbl_id += 1
 
             for i, cate_name in class_id2category.items():
-                cocoAPI_formatter["categories"].append({"id": i, "supercategory": "", "name": cate_name})
+                mAP_file_formatter["categories"].append({"id": i, "supercategory": "", "name": cate_name})
 
             with open(self.mAP_file_path, "w") as outfile:
-                json.dump(cocoAPI_formatter, outfile)
+                json.dump(mAP_file_formatter, outfile)
 
 
     @staticmethod
@@ -142,14 +141,14 @@ class Dataset:
         filenames = []
         images = []
         labels = []
-        ori_img_sizes = []
+        shapes = []
         
         for index, items in enumerate(minibatch):
             filenames.append(items[0])
             images.append(items[1])
             labels.append(items[2])
-            ori_img_sizes.append(items[3])
-        return filenames, torch.stack(images, dim=0), labels, ori_img_sizes
+            shapes.append(items[3])
+        return filenames, torch.stack(images, dim=0), labels, shapes
 
 
 
@@ -168,9 +167,9 @@ if __name__ == "__main__":
     val_dataset.load_transformer(transformer=transformer)
 
     for index, minibatch in enumerate(train_dataset):
-        filename, image, label, ori_img_size = train_dataset[index]
-        print(filename, label, image.shape, ori_img_size)
+        filename, image, label, shapes = train_dataset[index]
+        print(filename, label, image.shape, shapes)
     
     for index, minibatch in enumerate(val_dataset):
-        filename, image, label, ori_img_size = val_dataset[index]
-        print(filename, label, image.shape, ori_img_size)
+        filename, image, label, shapes = val_dataset[index]
+        print(filename, label, image.shape, shapes)

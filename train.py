@@ -15,6 +15,7 @@ from torch import optim
 from torch.backends import cudnn
 from torch.utils.data import DataLoader
 
+ROOT = Path(__file__).resolve().parents[0]
 OS_SYSTEM = platform.system()
 TIMESTAMP = datetime.today().strftime('%Y-%m-%d_%H-%M')
 cudnn.benchmark = True
@@ -46,8 +47,8 @@ def train(args, dataloader, model, criterion, optimizer):
         if ni <= args.nw:
             set_lr(optimizer, np.interp(ni, [0, args.nw], [args.init_lr, args.base_lr]))
 
-        images, labels = minibatch[1].cuda(args.rank, non_blocking=True), minibatch[2]
-        predictions = model(images)
+        images, labels = minibatch[1], minibatch[2]
+        predictions = model(images.cuda(args.rank, non_blocking=True))
         loss = criterion(predictions=predictions, labels=labels)
         loss[0].backward()
         optimizer.step()
@@ -60,11 +61,11 @@ def train(args, dataloader, model, criterion, optimizer):
             else:
                 losses[loss_name] += loss_value.item()
 
-    loss_str = f"[Epoch:{epoch:03d}] "
+    loss_str = f"[Train-Epoch:{epoch:03d}] "
     for loss_name in loss_type:
         losses[loss_name] /= len(dataloader)
         loss_str += f"{loss_name}: {losses[loss_name]:.4f}  "
-    logger.info(loss_str)
+    return loss_str
 
 
 def parse_args(make_dirs=True):
@@ -86,8 +87,6 @@ def parse_args(make_dirs=True):
     parser.add_argument("--rank", type=int, default=0, help="Process id for computation")
     parser.add_argument("--img_interval", type=int, default=5, help="Interval to log train/val image")
     args = parser.parse_args()
-    
-    ROOT = Path(__file__).resolve().parents[0]
     args.data = ROOT / "data" / args.data
     args.exp_path = ROOT / 'experiment' / args.exp_name
     args.weight_dir = args.exp_path / 'weight'
@@ -100,7 +99,8 @@ def parse_args(make_dirs=True):
 
 
 def main():
-    global epoch, logger
+    global epoch
+
     torch.manual_seed(seed_num)
     args = parse_args(make_dirs=True)
     logger = build_basic_logger(args.exp_path / 'train.log', set_level=1)
@@ -118,26 +118,25 @@ def main():
 
     args.nw = max(round(args.warmup_epoch * len(train_loader)), 100)
     args.class_list = train_dataset.class_list
-    args.num_classes = len(args.class_list)
-    args.color_list = generate_random_color(args.num_classes)
+    args.color_list = generate_random_color(len(args.class_list))
     
-    model = YoloModel(num_classes=args.num_classes, grid_size=7, num_boxes=2).cuda(args.rank)
-    criterion = YoloLoss(num_classes=args.num_classes, grid_size=model.grid_size, lambda_coord=args.lambda_coord, lambda_noobj=args.lambda_noobj)
+    model = YoloModel(num_classes=len(args.class_list), grid_size=7, num_boxes=2).cuda(args.rank)
+    criterion = YoloLoss(num_classes=len(args.class_list), grid_size=model.grid_size, lambda_coord=args.lambda_coord, lambda_noobj=args.lambda_noobj)
     optimizer = optim.SGD(model.parameters(), lr=args.init_lr, momentum=args.momentum, weight_decay=args.weight_decay)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[150, 175], gamma=0.1)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[75, 120], gamma=0.1)
 
     args.mAP_file_path = val_dataset.mAP_file_path
     args.cocoGt = COCO(annotation_file=args.mAP_file_path)
     best_epoch, best_score, best_mAP_str = 0, 0, "\n"
     
     for epoch in range(args.num_epochs):
-        train(args=args, dataloader=train_loader, model=model, criterion=criterion, optimizer=optimizer)
-        mAP_stats = validate(args=args, dataloader=val_loader, model=model, epoch=epoch)
-        scheduler.step()
-        torch.save(model.state_dict(), args.weight_dir / "last.pt")
+        train_loss_str = train(args=args, dataloader=train_loader, model=model, criterion=criterion, optimizer=optimizer)
+        val_loss_str, mAP_stats = validate(args=args, dataloader=val_loader, model=model, criterion=criterion, epoch=epoch)
+        logger.info(train_loss_str)
+        logger.info(val_loss_str)
 
         if mAP_stats is not None:
-            ap95, ap50 = mAP_stats[:2]
+            ap50 = mAP_stats[1]
             mAP_str = "\n"
             for mAP_format, mAP_value in zip(METRIC_FORMAT, mAP_stats):
                 mAP_str += f"{mAP_format} = {mAP_value:.3f}\n"
@@ -146,9 +145,9 @@ def main():
             if ap50 > best_score:
                 best_epoch, best_score, best_mAP_str = epoch, ap50, mAP_str
                 torch.save(model.state_dict(), args.weight_dir / "best.pt")
-    
-    if best_score > 0:
-        logger.info(f"[Best mAP : Epoch{best_epoch}]{best_mAP_str}")
+
+        scheduler.step()
+        torch.save(model.state_dict(), args.weight_dir / "last.pt")
 
 
 if __name__ == "__main__":

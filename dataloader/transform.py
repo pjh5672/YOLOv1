@@ -200,4 +200,4 @@ if __name__ == "__main__":
     image = to_image(input_tensor)
     image_with_bbox = visualize_target(image, label, class_list, color_list)
     print(filename, input_tensor.shape, label)
-    cv2.imwrite('./asset/train-data.png', image_with_bbox)
+    cv2.imwrite('./asset/train-data.jpg', image_with_bbox)

@@ -10,7 +10,7 @@ if str(ROOT) not in sys.path:
 import torch
 from torch import nn
 
-from backbone import build_resnet18
+from backbone import build_resnet18, build_resnet34, build_resnet50, build_vgg16, build_vgg16_bn
 from head import YoloHead
 from utils import set_grid
 
@@ -50,8 +50,6 @@ class YoloModel(nn.Module):
     def transform_pred_box(self, pred_box):
         xc = (pred_box[..., 0] + self.grid_x.to(self.device)) / self.grid_size
         yc = (pred_box[..., 1] + self.grid_y.to(self.device)) / self.grid_size
-        # xc = pred_box[..., 0] + (self.grid_x / self.grid_size).to(self.device)
-        # yc = pred_box[..., 1] + (self.grid_y / self.grid_size).to(self.device)
         w = pred_box[..., 2]
         h = pred_box[..., 3]
         return torch.stack((xc, yc, w, h), dim=-1)

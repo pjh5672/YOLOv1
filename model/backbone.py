@@ -10,6 +10,8 @@ model_urls = {
     'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
     'resnet101': 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth',
     'resnet152': 'https://download.pytorch.org/models/resnet152-b121ed2d.pth',
+    'vgg16': 'https://download.pytorch.org/models/vgg16-397923af.pth',
+    'vgg16_bn': 'https://download.pytorch.org/models/vgg16_bn-6c64b313.pth',
 }
 
 
@@ -58,7 +60,6 @@ class ResNet(nn.Module):
             layers.append(block(self.in_channels, out_channels))
         return nn.Sequential(*layers)
 
-
     def forward(self, x):
         C1 = self.conv1(x)
         C1 = self.bn1(C1)
@@ -70,6 +71,47 @@ class ResNet(nn.Module):
         C5 = self.layer4(C4)
         return C5
 
+
+class VGG16(nn.Module):
+    def __init__(self, batch_norm=False):
+        super().__init__()
+        cfg = [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M']
+        self.features = self.make_layers(cfg, batch_norm)
+
+    def forward(self, x):
+        x = self.features(x)
+        return x
+
+    def make_layers(self, cfg, batch_norm=False):
+        layers = []
+        in_channels = 3
+        for v in cfg:
+            if v == 'M':
+                layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+            else:
+                conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
+                if batch_norm:
+                    layers += [conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=True)]
+                else:
+                    layers += [conv2d, nn.ReLU(inplace=True)]
+                in_channels = v
+        return nn.Sequential(*layers)
+
+
+def build_vgg16(pretrained=False):
+    model = VGG16(batch_norm=False)
+    feat_dims = 512
+    if pretrained:
+        model.load_state_dict(model_zoo.load_url(model_urls['vgg16']), strict=False)
+    return model, feat_dims
+
+
+def build_vgg16_bn(pretrained=False):
+    model = VGG16(batch_norm=True)
+    feat_dims = 512
+    if pretrained:
+        model.load_state_dict(model_zoo.load_url(model_urls['vgg16_bn']), strict=False)
+    return model, feat_dims
 
 
 def build_resnet18(pretrained=False):
@@ -116,9 +158,11 @@ def build_resnet152(pretrained=False):
 if __name__ == "__main__":
     import torch
 
-    input_size = 224
-    device = torch.device('cuda')
-    backbone, feat_dims = build_resnet18(pretrained=True)
+    input_size = 448
+    device = torch.device('cpu')
+    backbone, feat_dims = build_vgg16(pretrained=True)
+    # backbone, feat_dims = build_vgg16_bn(pretrained=True)
+    # backbone, feat_dims = build_resnet18(pretrained=True)
     # backbone, feat_dims = build_resnet34(pretrained=True)
     # backbone, feat_dims = build_resnet50(pretrained=True)
     # backbone, feat_dims = build_resnet101(pretrained=True)

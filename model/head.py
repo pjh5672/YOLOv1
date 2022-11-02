@@ -19,22 +19,23 @@ class YoloHead(nn.Module):
 
 
     def forward(self, x):
-        out = self.conv1(x)
+        out = self.pool(x)
+        out = self.conv1(out)
         out = self.conv2(out)
         out = self.conv3(out)
         out = self.conv4(out)
         out = self.conv5(out)
-        out = self.pool(out)
         return out
 
 
 
 if __name__ == "__main__":
-    from backbone import build_resnet18
+    from backbone import build_resnet18, build_vgg16_bn
 
     input_size = 448
     num_classes = 1
-    backbone, feat_dims = build_resnet18(pretrained=True)
+    # backbone, feat_dims = build_resnet18(pretrained=True)
+    backbone, feat_dims = build_vgg16_bn(pretrained=True)
     head = YoloHead(in_channels=feat_dims, num_classes=num_classes, num_boxes=2)
 
     inp = torch.randn(1, 3, input_size, input_size)
