@@ -22,7 +22,7 @@ class YoloModel(nn.Module):
         self.grid_size = grid_size
         self.num_boxes = num_boxes
         self.num_classes = num_classes
-        self.backbone, feat_dims = build_resnet18(pretrained=True)
+        self.backbone, feat_dims = build_vgg16_bn(pretrained=True)
         self.head = YoloHead(in_channels=feat_dims, num_classes=num_classes, grid_size=grid_size, num_boxes=num_boxes)
         grid_x, grid_y = set_grid(grid_size=grid_size)
         self.grid_x = grid_x.contiguous().view((1, -1)).tile(1, self.num_boxes)
