@@ -10,19 +10,19 @@ if str(ROOT) not in sys.path:
 import torch
 from torch import nn
 
-from backbone import build_resnet18, build_resnet34, build_resnet50, build_vgg16, build_vgg16_bn
+from backbone import build_backbone
 from head import YoloHead
 from utils import set_grid
 
 
 
 class YoloModel(nn.Module):
-    def __init__(self, num_classes, grid_size=7, num_boxes=2):
+    def __init__(self, backbone, num_classes, grid_size=7, num_boxes=2):
         super().__init__()
         self.grid_size = grid_size
         self.num_boxes = num_boxes
         self.num_classes = num_classes
-        self.backbone, feat_dims = build_vgg16_bn(pretrained=True)
+        self.backbone, feat_dims = build_backbone(model_name=backbone, pretrained=True)
         self.head = YoloHead(in_channels=feat_dims, num_classes=num_classes, grid_size=grid_size, num_boxes=num_boxes)
         grid_x, grid_y = set_grid(grid_size=grid_size)
         self.grid_x = grid_x.contiguous().view((1, -1)).tile(1, self.num_boxes)
@@ -32,7 +32,6 @@ class YoloModel(nn.Module):
     def forward(self, x):
         self.device = x.device
         batch_size = x.shape[0]
-        
         out = self.backbone(x)
         out = self.head(out)
         out = out.permute(0, 2, 3, 1).contiguous()
@@ -62,12 +61,12 @@ if __name__ == "__main__":
     inp = torch.randn(1, 3, input_size, input_size)
     device = torch.device('cpu')
 
-    model = YoloModel(num_classes=num_classes).to(device)
+    model = YoloModel(backbone="resnet34", num_classes=num_classes).to(device)
     model.train()
     out = model(inp.to(device))
-    print(out)
+    print(out.shape)
 
     model.eval()
     out = model(inp.to(device))
     print(out.device)
-    print(out)
+    # print(out)

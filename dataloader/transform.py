@@ -40,10 +40,10 @@ class AugmentTransform:
         self.gain_h = 0.015
         self.gain_s = 0.5
         self.gain_v = 0.5
-        self.degrees = 0
-        self.translate = 0.2
-        self.scale = 0.2
-        self.perspective = 0.0
+        self.degrees = 10
+        self.translate = 0.3
+        self.scale = 0.5
+        self.perspective = 0.0001
     
 
     def __call__(self, image, label):
@@ -101,10 +101,10 @@ def to_square_image(image, label):
 class Albumentations:
     def __init__(self, p_flipud=0.0, p_fliplr=0.5):
         self.transform = A.Compose([
-            A.Blur(p=0.01),
-            A.MedianBlur(p=0.01),
-            A.ToGray(p=0.01),
-            A.CLAHE(p=0.01),
+            A.Blur(p=0.1),
+            A.MedianBlur(p=0.1),
+            A.ToGray(p=0.1),
+            A.CLAHE(p=0.1),
             A.VerticalFlip(p=p_flipud),
             A.HorizontalFlip(p=p_fliplr),
         ], bbox_params=A.BboxParams(format='yolo', label_fields=['class_ids']))
@@ -166,18 +166,18 @@ def random_perspective(image, label, size, degrees=0, translate=0.1, scale=0.1, 
     new[:, [0, 2]] = new[:, [0, 2]].clip(0, size)
     new[:, [1, 3]] = new[:, [1, 3]].clip(0, size)
 
-    idx = box_candidates(box1=label[:, 1:5].T * s, box2=new.T, wh_thr=4)
+    idx = box_candidates(box1=label[:, 1:5].T * s, box2=new.T, wh_thres=4)
     label = label[idx]
     label[:, 1:5] = new[idx]
     return image, label
 
 
-def box_candidates(box1, box2=None, wh_thr=4, ar_thr=20, area_thr=0.05, eps=1e-16):
+def box_candidates(box1, box2, wh_thres=4, ar_thres=20, area_thres=0.05, eps=1e-16):
     # Compute candidate boxes: box1 before augment, box2 after augment, wh_thr (pixels), aspect_ratio_thr, area_ratio
     w1, h1 = box1[2] - box1[0], box1[3] - box1[1]
     w2, h2 = box2[2] - box2[0], box2[3] - box2[1]
     ar = np.maximum(w2 / (h2 + eps), h2 / (w2 + eps))  # aspect ratio
-    return (w2 > wh_thr) & (h2 > wh_thr) & (w2 * h2 / (w1 * h1 + eps) > area_thr) & (ar < ar_thr)  # candidates
+    return (w2 > wh_thres) & (h2 > wh_thres) & (w2 * h2 / (w1 * h1 + eps) > area_thres) & (ar < ar_thres)  # candidates
 
 
 

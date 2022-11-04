@@ -58,7 +58,7 @@ def validate(args, dataloader, model, criterion, epoch=0):
 
     with open(args.mAP_file_path, mode="r") as f:
         mAP_json = json.load(f)
-    
+
     cocoPred = []
     check_images, check_preds, check_results = [], [], []
     mAP_stats = None
@@ -126,13 +126,14 @@ def parse_args(make_dirs=True):
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp_name", type=str, required=True, help="Name to log training")
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
+    parser.add_argument("--backbone", type=str, default="resnet18", help="Model architecture")
     parser.add_argument("--img_size", type=int, default=448, help="Model input size")
-    parser.add_argument("--batch_size", type=int, default=16, help="Batch size")
+    parser.add_argument("--bs", type=int, default=16, help="Batch size")
     parser.add_argument("--conf_thres", type=float, default=0.5, help="Threshold to filter confidence score")
     parser.add_argument("--nms_thres", type=float, default=0.6, help="Threshold to filter Box IoU of NMS process")
     parser.add_argument("--ckpt_name", type=str, default="best.pt", help="Path to trained model")
     parser.add_argument("--rank", type=int, default=0, help="Process id for computation")
-    parser.add_argument("--img_interval", type=int, default=5, help="Interval to log train/val image")
+    parser.add_argument("--img_interval", type=int, default=10, help="Interval to log train/val image")
     parser.add_argument("--img_log_dir", nargs='?', default = None)
     args = parser.parse_args()
     args.data = ROOT / "data" / args.data
@@ -147,7 +148,6 @@ def parse_args(make_dirs=True):
 
 def main():
     torch.manual_seed(seed_num)
-
     args = parse_args(make_dirs=True)
     logger = build_basic_logger(args.exp_path / 'val.log', set_level=1)
     logger.info(f"[Arguments]\n{pprint.pformat(vars(args))}\n")
@@ -155,14 +155,14 @@ def main():
     val_dataset = Dataset(yaml_path=args.data, phase='val')
     val_transformer = BasicTransform(input_size=args.img_size)
     val_dataset.load_transformer(transformer=val_transformer)
-    val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=args.batch_size, shuffle=False, pin_memory=True)
+    val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=args.bs, shuffle=False, pin_memory=True)
 
     args.class_list = val_dataset.class_list
     args.color_list = generate_random_color(len(args.class_list))
 
     ckpt = torch.load(args.ckpt_path, map_location = {"cpu":"cuda:%d" %args.rank})
-    model = YoloModel(num_classes=args.num_classes, num_boxes=2).cuda(args.rank)
-    criterion = YoloLoss(num_classes=args.num_classes, grid_size=model.grid_size)
+    model = YoloModel(backbone=args.backbone, num_classes=len(args.class_list)).cuda(args.rank)
+    criterion = YoloLoss(num_classes=len(args.class_list), grid_size=model.grid_size)
     model.load_state_dict(ckpt, strict=True)
 
     args.mAP_file_path = val_dataset.mAP_file_path

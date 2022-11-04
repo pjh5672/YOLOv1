@@ -11,6 +11,7 @@ from collections import defaultdict
 
 import torch
 import numpy as np
+from torch import nn
 from torch import optim
 from torch.backends import cudnn
 from torch.utils.data import DataLoader
@@ -42,18 +43,25 @@ def train(args, dataloader, model, criterion, optimizer):
     losses = defaultdict(float)
 
     model.train()
+    optimizer.zero_grad()
     for i, minibatch in enumerate(dataloader):
         ni = i + len(dataloader) * epoch
         if ni <= args.nw:
-            set_lr(optimizer, np.interp(ni, [0, args.nw], [args.init_lr, args.base_lr]))
+            xi = [0, args.nw]
+            args.accumulate = max(1, np.interp(ni, xi, [1, args.nbs / args.bs]).round())
+            set_lr(optimizer, np.interp(ni, xi, [args.init_lr, args.base_lr]))
 
         images, labels = minibatch[1], minibatch[2]
         predictions = model(images.cuda(args.rank, non_blocking=True))
         loss = criterion(predictions=predictions, labels=labels)
         loss[0].backward()
-        optimizer.step()
-        optimizer.zero_grad()
-        
+
+        if ni - args.last_opt_step >= args.accumulate:
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm=10.0)
+            optimizer.step()
+            optimizer.zero_grad()
+            args.last_opt_step = ni
+    
         for loss_name, loss_value in zip(loss_type, loss):
             if not torch.isfinite(loss_value) and loss_name != 'multipart':
                 print(f'############## {loss_name} Loss is Nan/Inf ! {loss_value} ##############')
@@ -72,10 +80,12 @@ def parse_args(make_dirs=True):
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp_name", type=str, required=True, help="Name to log training")
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
+    parser.add_argument("--backbone", type=str, default="resnet18", help="Model architecture")
     parser.add_argument("--img_size", type=int, default=448, help="Model input size")
-    parser.add_argument("--batch_size", type=int, default=12, help="Batch size")
+    parser.add_argument("--bs", type=int, default=64, help="Batch size")
+    parser.add_argument("--nbs", type=int, default=64, help="Nominal batch size")
     parser.add_argument("--num_epochs", type=int, default=200, help="Number of training epochs")
-    parser.add_argument("--warmup_epoch", type=int, default=3, help="Epochs for warming up training")
+    parser.add_argument("--warmup", type=int, default=1, help="Epochs for warming up training")
     parser.add_argument("--init_lr", type=float, default=0.001, help="Learning rate for inital training")
     parser.add_argument("--base_lr", type=float, default=0.01, help="Base learning rate")
     parser.add_argument("--momentum", type=float, default=0.9, help="Momentum")
@@ -85,7 +95,7 @@ def parse_args(make_dirs=True):
     parser.add_argument("--conf_thres", type=float, default=0.01, help="Threshold to filter confidence score")
     parser.add_argument("--nms_thres", type=float, default=0.6, help="Threshold to filter Box IoU of NMS process")
     parser.add_argument("--rank", type=int, default=0, help="Process id for computation")
-    parser.add_argument("--img_interval", type=int, default=5, help="Interval to log train/val image")
+    parser.add_argument("--img_interval", type=int, default=10, help="Interval to log train/val image")
     args = parser.parse_args()
     args.data = ROOT / "data" / args.data
     args.exp_path = ROOT / 'experiment' / args.exp_name
@@ -99,8 +109,8 @@ def parse_args(make_dirs=True):
 
 
 def main():
-    global epoch
-
+    global epoch, logger
+    
     torch.manual_seed(seed_num)
     args = parse_args(make_dirs=True)
     logger = build_basic_logger(args.exp_path / 'train.log', set_level=1)
@@ -110,20 +120,22 @@ def main():
     # train_transformer = BasicTransform(input_size=args.img_size)
     train_transformer = AugmentTransform(input_size=args.img_size)
     train_dataset.load_transformer(transformer=train_transformer)
-    train_loader = DataLoader(dataset=train_dataset, collate_fn=Dataset.collate_fn, batch_size=args.batch_size, shuffle=True, pin_memory=True)
+    train_loader = DataLoader(dataset=train_dataset, collate_fn=Dataset.collate_fn, batch_size=args.bs, shuffle=True, pin_memory=True)
     val_dataset = Dataset(yaml_path=args.data, phase='val')
     val_transformer = BasicTransform(input_size=args.img_size)
     val_dataset.load_transformer(transformer=val_transformer)
-    val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=args.batch_size, shuffle=False, pin_memory=True)
+    val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=args.bs, shuffle=False, pin_memory=True)
 
-    args.nw = max(round(args.warmup_epoch * len(train_loader)), 100)
     args.class_list = train_dataset.class_list
     args.color_list = generate_random_color(len(args.class_list))
+    args.nw = max(round(args.warmup * len(train_loader)), 100)
+    args.accumulate = max(round(args.nbs / args.bs), 1)
+    args.last_opt_step = -1
     
-    model = YoloModel(num_classes=len(args.class_list), grid_size=7, num_boxes=2).cuda(args.rank)
+    model = YoloModel(backbone=args.backbone, num_classes=len(args.class_list), grid_size=7, num_boxes=2).cuda(args.rank)
     criterion = YoloLoss(num_classes=len(args.class_list), grid_size=model.grid_size, lambda_coord=args.lambda_coord, lambda_noobj=args.lambda_noobj)
-    optimizer = optim.SGD(model.parameters(), lr=args.init_lr, momentum=args.momentum, weight_decay=args.weight_decay)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[75, 105], gamma=0.1)
+    optimizer = optim.SGD(model.parameters(), lr=args.base_lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[75, 105, 135, 165], gamma=0.1)
 
     args.mAP_file_path = val_dataset.mAP_file_path
     args.cocoGt = COCO(annotation_file=args.mAP_file_path)
