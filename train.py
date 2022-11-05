@@ -84,7 +84,7 @@ def parse_args(make_dirs=True):
     parser.add_argument("--img_size", type=int, default=448, help="Model input size")
     parser.add_argument("--bs", type=int, default=64, help="Batch size")
     parser.add_argument("--nbs", type=int, default=64, help="Nominal batch size")
-    parser.add_argument("--num_epochs", type=int, default=200, help="Number of training epochs")
+    parser.add_argument("--num_epochs", type=int, default=300, help="Number of training epochs")
     parser.add_argument("--warmup", type=int, default=1, help="Epochs for warming up training")
     parser.add_argument("--init_lr", type=float, default=0.001, help="Learning rate for inital training")
     parser.add_argument("--base_lr", type=float, default=0.01, help="Base learning rate")
@@ -132,10 +132,10 @@ def main():
     args.accumulate = max(round(args.nbs / args.bs), 1)
     args.last_opt_step = -1
     
-    model = YoloModel(backbone=args.backbone, num_classes=len(args.class_list), grid_size=7, num_boxes=2).cuda(args.rank)
+    model = YoloModel(backbone=args.backbone, num_classes=len(args.class_list), grid_size=7).cuda(args.rank)
     criterion = YoloLoss(num_classes=len(args.class_list), grid_size=model.grid_size, lambda_coord=args.lambda_coord, lambda_noobj=args.lambda_noobj)
     optimizer = optim.SGD(model.parameters(), lr=args.base_lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[75, 105, 135, 165], gamma=0.1)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100, 200], gamma=0.1)
 
     args.mAP_file_path = val_dataset.mAP_file_path
     args.cocoGt = COCO(annotation_file=args.mAP_file_path)
@@ -149,12 +149,16 @@ def main():
 
         if mAP_stats is not None:
             ap50 = mAP_stats[1]
-            mAP_str = "\n"
-            for mAP_format, mAP_value in zip(METRIC_FORMAT, mAP_stats):
-                mAP_str += f"{mAP_format} = {mAP_value:.3f}\n"
-            logger.info(mAP_str)
+            # mAP_str = "\n"
+            # for mAP_format, mAP_value in zip(METRIC_FORMAT, mAP_stats):
+            #     mAP_str += f"{mAP_format} = {mAP_value:.3f}\n"
+            # logger.info(mAP_str)
 
             if ap50 > best_score:
+                mAP_str = "\n"
+                for mAP_format, mAP_value in zip(METRIC_FORMAT, mAP_stats):
+                    mAP_str += f"{mAP_format} = {mAP_value:.3f}\n"
+                logger.info(mAP_str)
                 best_epoch, best_score, best_mAP_str = epoch, ap50, mAP_str
                 torch.save(model.state_dict(), args.weight_dir / "best.pt")
 

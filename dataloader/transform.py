@@ -40,9 +40,9 @@ class AugmentTransform:
         self.gain_h = 0.015
         self.gain_s = 0.5
         self.gain_v = 0.5
-        self.degrees = 10
-        self.translate = 0.3
-        self.scale = 0.5
+        self.degrees = 5
+        self.translate = 0.2
+        self.scale = 0.4
         self.perspective = 0.0001
     
 
@@ -101,10 +101,10 @@ def to_square_image(image, label):
 class Albumentations:
     def __init__(self, p_flipud=0.0, p_fliplr=0.5):
         self.transform = A.Compose([
-            A.Blur(p=0.1),
-            A.MedianBlur(p=0.1),
-            A.ToGray(p=0.1),
-            A.CLAHE(p=0.1),
+            A.Blur(p=0.05),
+            A.MedianBlur(p=0.05),
+            A.ToGray(p=0.05),
+            A.CLAHE(p=0.05),
             A.VerticalFlip(p=p_flipud),
             A.HorizontalFlip(p=p_fliplr),
         ], bbox_params=A.BboxParams(format='yolo', label_fields=['class_ids']))

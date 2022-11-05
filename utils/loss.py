@@ -29,7 +29,6 @@ class YoloLoss():
     def __call__(self, predictions, labels):
         self.device = predictions.device
         self.batch_size = predictions.shape[0]
-        
         targets = self.build_batch_target(labels).to(self.device)
 
         with torch.no_grad():
@@ -129,7 +128,7 @@ if __name__ == "__main__":
     train_dataset.load_transformer(transformer=transformer)
     train_loader = DataLoader(dataset=train_dataset, collate_fn=Dataset.collate_fn, batch_size=batch_size, shuffle=False, pin_memory=True, sampler=None)
     
-    model = YoloModel(num_classes=num_classes, grid_size=7, num_boxes=2).to(device)
+    model = YoloModel(backbone="resnet18", num_classes=num_classes, grid_size=7).to(device)
     criterion = YoloLoss(num_classes=num_classes, grid_size=model.grid_size, lambda_coord=5.0, lambda_noobj=0.5)
     optimizer = optim.SGD(model.parameters(), lr=0.0001)
     optimizer.zero_grad()

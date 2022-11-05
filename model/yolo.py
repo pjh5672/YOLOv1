@@ -17,16 +17,15 @@ from utils import set_grid
 
 
 class YoloModel(nn.Module):
-    def __init__(self, backbone, num_classes, grid_size=7, num_boxes=2):
+    def __init__(self, backbone, num_classes, grid_size=7):
         super().__init__()
         self.grid_size = grid_size
-        self.num_boxes = num_boxes
         self.num_classes = num_classes
         self.backbone, feat_dims = build_backbone(model_name=backbone, pretrained=True)
-        self.head = YoloHead(in_channels=feat_dims, num_classes=num_classes, grid_size=grid_size, num_boxes=num_boxes)
+        self.head = YoloHead(in_channels=feat_dims, num_classes=num_classes, grid_size=grid_size)
         grid_x, grid_y = set_grid(grid_size=grid_size)
-        self.grid_x = grid_x.contiguous().view((1, -1)).tile(1, self.num_boxes)
-        self.grid_y = grid_y.contiguous().view((1, -1)).tile(1, self.num_boxes)
+        self.grid_x = grid_x.contiguous().view((1, -1)).tile(1, 2)
+        self.grid_y = grid_y.contiguous().view((1, -1)).tile(1, 2)
 
 
     def forward(self, x):
@@ -37,7 +36,7 @@ class YoloModel(nn.Module):
         out = out.permute(0, 2, 3, 1).contiguous()
         pred_obj = out[..., [0, 5]].view(batch_size, -1, 1)
         pred_box = torch.cat((out[..., 1:5], out[..., 6:10]), dim=-1).view(batch_size, -1, 4)
-        pred_cls = out[..., 10:].view(batch_size, -1, self.num_classes).tile(self.num_boxes, 1)
+        pred_cls = out[..., 10:].view(batch_size, -1, self.num_classes).tile(2, 1)
 
         if self.training:
             return torch.cat((pred_obj, pred_box, pred_cls), dim=-1)
@@ -61,7 +60,7 @@ if __name__ == "__main__":
     inp = torch.randn(1, 3, input_size, input_size)
     device = torch.device('cpu')
 
-    model = YoloModel(backbone="resnet34", num_classes=num_classes).to(device)
+    model = YoloModel(backbone="resnet18", num_classes=num_classes, grid_size=7).to(device)
     model.train()
     out = model(inp.to(device))
     print(out.shape)

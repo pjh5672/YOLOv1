@@ -6,6 +6,7 @@ def weight_init_kaiming_uniform(module):
         nn.init.kaiming_uniform_(module.weight)
     elif isinstance(module, nn.BatchNorm2d):
         module.weight.data.fill_(1.0)
+        module.bias.data.fill_(0.0)
 
 
 class Conv(nn.Module):
