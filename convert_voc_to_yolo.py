@@ -66,14 +66,14 @@ def convert_voc_to_yolo(data_dir, output_dir):
 
 if __name__ == "__main__":
     data_dirs = [
-        # "D:/DATASET/PASCAL-VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007",
+        "D:/DATASET/PASCAL-VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007",
         "D:/DATASET/PASCAL-VOC/VOCtrainval_11-May-2012/VOCdevkit/VOC2012",
-        # "D:/DATASET/PASCAL-VOC/VOCtest_06-Nov-2007/VOCdevkit/VOC2007",
+        "D:/DATASET/PASCAL-VOC/VOCtest_06-Nov-2007/VOCdevkit/VOC2007",
         ]
     output_dirs = [
-        # "D:/DATASET/PASCAL-VOC/labels/trainval2007",
+        "D:/DATASET/PASCAL-VOC/labels/trainval2007",
         "D:/DATASET/PASCAL-VOC/labels/trainval2012",
-        # "D:/DATASET/PASCAL-VOC/labels/test2007",
+        "D:/DATASET/PASCAL-VOC/labels/test2007",
         ]
 
     for data_dir, output_dir in zip(data_dirs, output_dirs):

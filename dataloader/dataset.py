@@ -156,7 +156,7 @@ if __name__ == "__main__":
     FILE = Path(__file__).resolve()
     ROOT = FILE.parents[1]
     
-    yaml_path = ROOT / 'data' / 'toy.yaml'
+    yaml_path = ROOT / 'data' / 'voc.yaml'
     input_size = 224
     transformer = BasicTransform(input_size=input_size)
     # transformer = AugmentTransform(input_size=input_size)
