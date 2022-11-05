@@ -185,7 +185,7 @@ if __name__ == "__main__":
     from dataset import Dataset
     from utils import visualize_target, generate_random_color, clip_box_coordinate
 
-    yaml_path = ROOT / 'data' / 'toy.yaml'
+    yaml_path = ROOT / 'data' / 'voc.yaml'
     input_size = 448
     train_dataset = Dataset(yaml_path=yaml_path, phase='train')
     # transformer = BasicTransform(input_size=input_size)
@@ -195,8 +195,11 @@ if __name__ == "__main__":
     color_list = generate_random_color(len(class_list))
 
     index = np.random.randint(0, len(train_dataset))
-    filename, image, label = train_dataset.get_GT_item(index)
-    input_tensor, label = transformer(image=image, label=label)
+    try:
+        filename, image, label = train_dataset.get_GT_item(index)
+        input_tensor, label = transformer(image=image, label=label)
+    except:
+        print(filename)
     image = to_image(input_tensor)
     image_with_bbox = visualize_target(image, label, class_list, color_list)
     print(filename, input_tensor.shape, label)

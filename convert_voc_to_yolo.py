@@ -12,8 +12,8 @@ class_list = [
 
 
 def xml_to_yolo_bbox(bbox, img_w, img_h):
-    x_center = ((bbox[2] + bbox[0]) / 2) / img_w
-    y_center = ((bbox[3] + bbox[1]) / 2) / img_h
+    x_center = ((bbox[0] + bbox[2]) / 2) / img_w
+    y_center = ((bbox[1] + bbox[3]) / 2) / img_h
     width = (bbox[2] - bbox[0]) / img_w
     height = (bbox[3] - bbox[1]) / img_h
     return [x_center, y_center, width, height]
@@ -31,8 +31,13 @@ def parse_content_from_xml(filepath, class_list):
         if label not in class_list:
             class_list.append(label)
         index = class_list.index(label)
-        pil_bbox = [int(float(x.text)) for x in obj.find("bndbox")]
-        yolo_bbox = xml_to_yolo_bbox(pil_bbox, width, height)
+        bbox = [
+            max(float(obj.find("bndbox").find("xmin").text), 0),
+            max(float(obj.find("bndbox").find("ymin").text), 0),
+            min(float(obj.find("bndbox").find("xmax").text), width),
+            min(float(obj.find("bndbox").find("ymax").text), height),
+        ]
+        yolo_bbox = xml_to_yolo_bbox(bbox, width, height)
         res.append(f"{index} {yolo_bbox[0]:.6f} {yolo_bbox[1]:.6f} {yolo_bbox[2]:.6f} {yolo_bbox[3]:.6f}")
     return res
 

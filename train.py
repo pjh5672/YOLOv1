@@ -135,7 +135,7 @@ def main():
     model = YoloModel(backbone=args.backbone, num_classes=len(args.class_list)).cuda(args.rank)
     criterion = YoloLoss(num_classes=len(args.class_list), grid_size=model.grid_size, lambda_coord=args.lambda_coord, lambda_noobj=args.lambda_noobj)
     optimizer = optim.SGD(model.parameters(), lr=args.base_lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100, 200], gamma=0.1)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[85, 200], gamma=0.1)
 
     args.mAP_file_path = val_dataset.mAP_file_path
     args.cocoGt = COCO(annotation_file=args.mAP_file_path)
