@@ -24,9 +24,9 @@ class Dataset:
     def __init__(self, yaml_path, phase):
         with open(yaml_path, mode="r") as f:
             data_item = yaml.load(f, Loader=yaml.FullLoader)
+            
         self.phase = phase
         self.class_list = data_item["CLASS_INFO"]
-
         self.image_paths = []
         for sub_dir in data_item[self.phase.upper()]:
             image_dir = Path(data_item["PATH"]) / sub_dir
@@ -85,7 +85,7 @@ class Dataset:
 
     def check_no_label(self, label):
         if len(label) == 0:
-            label = np.array([[-1, 0.5, 0.5, 1., 1.]], dtype=np.float32)
+            label = np.array([[-1, 0.5, 0.5, 1.0, 1.0]], dtype=np.float32)
         return label
 
 
@@ -156,20 +156,21 @@ if __name__ == "__main__":
     FILE = Path(__file__).resolve()
     ROOT = FILE.parents[1]
     
-    yaml_path = ROOT / 'data' / 'voc.yaml'
-    input_size = 224
-    transformer = BasicTransform(input_size=input_size)
-    # transformer = AugmentTransform(input_size=input_size)
+    yaml_path = ROOT / 'data' / 'toy.yaml'
+    input_size = 448
     
     train_dataset = Dataset(yaml_path=yaml_path, phase='train')
-    train_dataset.load_transformer(transformer=transformer)
+    train_transformer = AugmentTransform(input_size=input_size)
+    train_dataset.load_transformer(transformer=train_transformer)
     val_dataset = Dataset(yaml_path=yaml_path, phase='val')
-    val_dataset.load_transformer(transformer=transformer)
+    val_transformer = BasicTransform(input_size=input_size)
+    val_dataset.load_transformer(transformer=val_transformer)
 
+    print(len(train_dataset), len(val_dataset))
     for index, minibatch in enumerate(train_dataset):
-        filename, image, label, shapes = train_dataset[index]
-        print(filename, label, image.shape, shapes)
-    
+        filename, input_tensor, label, shapes = train_dataset[index]
+    print(f"train dataset sanity-check done")
+
     for index, minibatch in enumerate(val_dataset):
         filename, image, label, shapes = val_dataset[index]
-        print(filename, label, image.shape, shapes)
+    print(f"val dataset sanity-check done")

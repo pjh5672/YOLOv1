@@ -26,15 +26,6 @@ def scale_to_norm(boxes, image_w, image_h):
     return boxes
 
 
-def square_to_original(boxes, input_size, origin_size):
-    img_h, img_w, _ = origin_size
-    boxes /= input_size
-    boxes[:, [0,2]] *= (max(origin_size) / img_w)
-    boxes[:, [1,3]] *= (max(origin_size) / img_h)
-    box_x1y1x2y2 = scale_to_original(boxes, scale_w=img_w, scale_h=img_h)
-    return box_x1y1x2y2
-
-
 def clip_box_coordinate(boxes):
     boxes = transform_xcycwh_to_x1y1x2y2(boxes)
     boxes = transform_x1y1x2y2_to_xcycwh(boxes)
@@ -44,39 +35,34 @@ def clip_box_coordinate(boxes):
 def transform_x1y1x2y2_to_x1y1wh(boxes):
     x1y1 = boxes[:, :2]
     wh = boxes[:, 2:] - boxes[:, :2]
-    x1y1wh = np.concatenate((x1y1, wh), axis=1)
-    return x1y1wh
+    return np.concatenate((x1y1, wh), axis=1)
 
 
 def transform_xcycwh_to_x1y1wh(boxes):
     x1y1 = boxes[:, :2] - boxes[:, 2:] / 2
     wh = boxes[:, 2:]
-    x1y1wh = np.concatenate((x1y1, wh), axis=1).clip(min=0)
-    return x1y1wh
+    return np.concatenate((x1y1, wh), axis=1).clip(min=0)
 
 
 def transform_xcycwh_to_x1y1x2y2(boxes, clip_max=None):
     x1y1 = boxes[:, :2] - boxes[:, 2:] / 2
     x2y2 = boxes[:, :2] + boxes[:, 2:] / 2
     x1y1x2y2 = np.concatenate((x1y1, x2y2), axis=1)
-    x1y1x2y2 = x1y1x2y2.clip(min=0, max=clip_max if clip_max is not None else 1)
-    return x1y1x2y2
+    return x1y1x2y2.clip(min=0, max=clip_max if clip_max is not None else 1)
 
 
 def transform_x1y1x2y2_to_xcycwh(boxes):
     wh = boxes[:, 2:] - boxes[:, :2]
     xcyc = boxes[:, :2] + wh / 2
-    xcycwh = np.concatenate((xcyc, wh), axis=1)
-    return xcycwh
+    return np.concatenate((xcyc, wh), axis=1)
 
 
 def filter_confidence(prediction, conf_threshold=0.01):
-    valid_index = (prediction[:, 0] > conf_threshold)
-    conf = prediction[:, 0][valid_index]
-    box = prediction[:, 1:5][valid_index]
-    cls_id = np.argmax(prediction[:, 5:][valid_index], axis=1)
-    prediction = np.concatenate([cls_id[:, np.newaxis], box, conf[:, np.newaxis]], axis=-1)
-    return prediction
+    keep = (prediction[:, 0] > conf_threshold)
+    conf = prediction[:, 0][keep]
+    box = prediction[:, 1:5][keep]
+    cls_id = prediction[:, 5][keep]
+    return np.concatenate([cls_id[:, np.newaxis], box, conf[:, np.newaxis]], axis=-1)
 
 
 def hard_NMS(prediction, iou_threshold):
@@ -100,17 +86,17 @@ def hard_NMS(prediction, iou_threshold):
         h = np.maximum(0, yy2 - yy1)
         overlap = (w * h)
         ious = overlap / (areas[order[0]] + areas[order[1:]] - overlap + 1e-8)
-        order = order[np.where(ious < iou_threshold)[0] + 1]
+        order = order[np.where(ious <= iou_threshold)[0] + 1]
     return pick
 
 
-def run_NMS(prediction, iou_threshold, class_agnostic=False, maxDets=100):
+def run_NMS(prediction, iou_threshold, class_agnostic=False):
     if len(prediction) == 0:
         return []
 
     if class_agnostic:
         pick = hard_NMS(prediction=prediction, iou_threshold=iou_threshold)
-        return prediction[pick[:maxDets]]
+        return prediction[pick]
 
     prediction_multi_class = []
     for cls_id in np.unique(prediction[:, 0]):
@@ -119,7 +105,7 @@ def run_NMS(prediction, iou_threshold, class_agnostic=False, maxDets=100):
         prediction_multi_class.append(pred_per_cls_id[pick_per_cls_id])
     prediction_multi_class = np.concatenate(prediction_multi_class, axis=0)
     order = prediction_multi_class[:, -1].argsort()[::-1]
-    return prediction_multi_class[order[:maxDets]]
+    return prediction_multi_class[order]
 
 
 def imwrite(filename, img):

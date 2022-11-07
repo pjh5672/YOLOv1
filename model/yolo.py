@@ -17,32 +17,36 @@ from utils import set_grid
 
 
 class YoloModel(nn.Module):
-    def __init__(self, backbone, num_classes, grid_size=14):
+    def __init__(self, input_size, backbone, num_classes):
         super().__init__()
-        self.grid_size = grid_size
+        self.stride = 32
+        self.grid_size = input_size // self.stride
         self.num_classes = num_classes
-        self.backbone, feat_dims = build_backbone(model_name=backbone, pretrained=True)
+        self.backbone, feat_dims = build_backbone(arch_name=backbone, pretrained=True)
         self.head = YoloHead(in_channels=feat_dims, num_classes=num_classes)
-        grid_x, grid_y = set_grid(grid_size=grid_size)
-        self.grid_x = grid_x.contiguous().view((1, -1)).tile(1, 2)
-        self.grid_y = grid_y.contiguous().view((1, -1)).tile(1, 2)
+        grid_x, grid_y = set_grid(grid_size=self.grid_size)
+        self.grid_x = grid_x.contiguous().view((1, -1))
+        self.grid_y = grid_y.contiguous().view((1, -1))
 
 
     def forward(self, x):
         self.device = x.device
-        batch_size = x.shape[0]
+        
         out = self.backbone(x)
         out = self.head(out)
-        out = out.permute(0, 2, 3, 1).contiguous()
-        pred_obj = out[..., [0, 5]].view(batch_size, -1, 1)
-        pred_box = torch.cat((out[..., 1:5], out[..., 6:10]), dim=-1).view(batch_size, -1, 4)
-        pred_cls = out[..., 10:].view(batch_size, -1, self.num_classes).tile(2, 1)
+        out = out.permute(0, 2, 3, 1).contiguous().flatten(1, 2)
 
+        pred_obj = torch.sigmoid(out[..., [0]])
+        pred_box = out[..., 1:5]
+        pred_cls = out[..., 5:]
+        
         if self.training:
             return torch.cat((pred_obj, pred_box, pred_cls), dim=-1)
         else:
             pred_box = self.transform_pred_box(pred_box)
-            return torch.cat((pred_obj, pred_box, pred_cls), dim=-1)
+            pred_score = pred_obj * torch.softmax(pred_cls, dim=-1)
+            pred_score, pred_label = pred_score.max(dim=-1)
+            return torch.cat((pred_score.unsqueeze(-1), pred_box, pred_label.unsqueeze(-1)), dim=-1)
 
 
     def transform_pred_box(self, pred_box):
@@ -56,11 +60,11 @@ class YoloModel(nn.Module):
 
 if __name__ == "__main__":
     input_size = 448
-    num_classes = 1
-    inp = torch.randn(1, 3, input_size, input_size)
-    device = torch.device('cpu')
+    num_classes = 20
+    inp = torch.randn(2, 3, input_size, input_size)
+    device = torch.device('cuda')
 
-    model = YoloModel(backbone="resnet18", num_classes=num_classes).to(device)
+    model = YoloModel(input_size=input_size, backbone="resnet18", num_classes=num_classes).to(device)
     model.train()
     out = model(inp.to(device))
     print(out.shape)
@@ -68,4 +72,4 @@ if __name__ == "__main__":
     model.eval()
     out = model(inp.to(device))
     print(out.device)
-    # print(out)
+    print(out.shape)

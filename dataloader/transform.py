@@ -17,18 +17,16 @@ if str(ROOT) not in sys.path:
 from utils import transform_xcycwh_to_x1y1x2y2, transform_x1y1x2y2_to_xcycwh, scale_to_original, scale_to_norm
 
 
-IMAGENET_MEAN = 0.485, 0.456, 0.406  # IMAGENET MEAN on RGB space
-IMAGENET_STD = 0.229, 0.224, 0.225  # IMAGENET STD on RGB space
+MEAN = 0.485, 0.456, 0.406 # RGB
+STD = 0.229, 0.224, 0.225 # RGB
 
 
-class BasicTransform:
+class BasicTransform(object):
     def __init__(self, input_size):
         self.input_size = input_size
 
-
     def __call__(self, image, label):
-        image, label = to_square_image(image, label)
-        image = cv2.resize(image, dsize=(self.input_size, self.input_size))
+        image = cv2.resize(image, (self.input_size, self.input_size)).astype(np.float32)
         tensor = to_tensor(image)
         return tensor, label
 
@@ -39,7 +37,7 @@ class AugmentTransform:
         self.flip = Albumentations(p_flipud=0.0, p_fliplr=0.5)
         self.gain_h = 0.015
         self.gain_s = 0.5
-        self.gain_v = 0.5
+        self.gain_v = 0.3
         self.degrees = 5
         self.translate = 0.2
         self.scale = 0.4
@@ -48,29 +46,30 @@ class AugmentTransform:
 
     def __call__(self, image, label):
         img_h, img_w = image.shape[:2]
-        size = max(img_h, img_w) if max(img_h, img_w) > self.input_size else self.input_size
+        crop_size = int(min(img_h, img_w) * 0.9)
         image, label = self.flip(image=image, label=label)
         image = augment_hsv(image, gain_h=self.gain_h, gain_s=self.gain_s, gain_v=self.gain_v)
         label[:, 1:5] = transform_xcycwh_to_x1y1x2y2(label[:, 1:5])
         label[:, 1:5] = scale_to_original(label[:, 1:5], scale_w=img_w, scale_h=img_h)
-        image, label = random_perspective(image, label, size=size, 
+        image, label = random_crop(image, label, crop_size=crop_size, area_thres=0.25)
+        image, label = random_perspective(image, label, size=crop_size, 
                                           degrees=self.degrees, translate=self.translate, 
                                           scale=self.scale, perspective=self.perspective)
-        label[:, 1:5] = scale_to_norm(label[:, 1:5], image_w=size, image_h=size)
+        label[:, 1:5] = scale_to_norm(label[:, 1:5], image_w=crop_size, image_h=crop_size)
         label[:, 1:5] = transform_x1y1x2y2_to_xcycwh(label[:, 1:5])
         image = cv2.resize(image, dsize=(self.input_size, self.input_size))
         tensor = to_tensor(image)
         return tensor, label
 
 
-def to_tensor(image, mean=IMAGENET_MEAN, std=IMAGENET_STD):
+def to_tensor(image, mean=MEAN, std=STD):
     image = np.ascontiguousarray(image.transpose(2, 0, 1))
     image = torch.from_numpy(image).float()
     tensor = TF.normalize(image / 255, mean, std)
     return tensor
 
 
-def to_image(tensor, mean=IMAGENET_MEAN, std=IMAGENET_STD):
+def to_image(tensor, mean=MEAN, std=STD):
     denorm_tensor = tensor.clone()
     for t, m, s in zip(denorm_tensor, mean, std):
         t.mul_(s).add_(m)
@@ -101,10 +100,10 @@ def to_square_image(image, label):
 class Albumentations:
     def __init__(self, p_flipud=0.0, p_fliplr=0.5):
         self.transform = A.Compose([
-            A.Blur(p=0.05),
-            A.MedianBlur(p=0.05),
-            A.ToGray(p=0.05),
-            A.CLAHE(p=0.05),
+            A.Blur(p=0.01),
+            A.MedianBlur(p=0.01),
+            A.ToGray(p=0.01),
+            A.CLAHE(p=0.01),
             A.VerticalFlip(p=p_flipud),
             A.HorizontalFlip(p=p_fliplr),
         ], bbox_params=A.BboxParams(format='yolo', label_fields=['class_ids']))
@@ -123,13 +122,35 @@ def augment_hsv(image, gain_h=0.5, gain_s=0.5, gain_v=0.5):
     r = np.random.uniform(-1, 1, 3) * [gain_h, gain_s, gain_v] + 1  # random gains
     hue, sat, val = cv2.split(cv2.cvtColor(image, cv2.COLOR_RGB2HSV))
     dtype = image.dtype  # uint8
-
     x = np.arange(0, 256, dtype=r.dtype)
     lut_hue = ((x * r[0]) % 180).astype(dtype)
     lut_sat = np.clip(x * r[1], 0, 255).astype(dtype)
     lut_val = np.clip(x * r[2], 0, 255).astype(dtype)
     image_hsv = cv2.merge((cv2.LUT(hue, lut_hue), cv2.LUT(sat, lut_sat), cv2.LUT(val, lut_val)))
     return cv2.cvtColor(image_hsv, cv2.COLOR_HSV2RGB)
+
+
+def random_crop(image, label, crop_size, area_thres=0.2):
+    img_h, img_w, _ = image.shape
+    x1 = random.randint(0, img_w - crop_size)
+    y1 = random.randint(0, img_h - crop_size)
+    x2 = x1 + crop_size
+    y2 = y1 + crop_size
+    
+    image = image[y1:y2, x1:x2, :]
+    boxes = label[:, 1:].copy()
+    crop_x1 = np.clip(boxes[:, 0] - x1, a_min=0, a_max=None)
+    crop_y1 = np.clip(boxes[:, 1] - y1, a_min=0, a_max=None)
+    crop_x2 = np.clip(boxes[:, 2] - x1, a_min=0, a_max=crop_size)
+    crop_y2 = np.clip(boxes[:, 3] - y1, a_min=0, a_max=crop_size)
+    crop_boxes = np.stack((crop_x1, crop_y1, crop_x2, crop_y2), axis=1)
+    idx = box_candidates(box1=boxes.T, box2=crop_boxes.T, area_thres=area_thres)
+    
+    label = label[idx]
+    label[:, 1:5] = crop_boxes[idx]
+    if len(label) == 0:
+        label = np.array([[-1, 0.5, 0.5, 1.0, 1.0]], dtype=np.float32)
+    return image, label
 
 
 def random_perspective(image, label, size, degrees=0, translate=0.1, scale=0.1, perspective=0.0):
@@ -185,7 +206,7 @@ if __name__ == "__main__":
     from dataset import Dataset
     from utils import visualize_target, generate_random_color, clip_box_coordinate
 
-    yaml_path = ROOT / 'data' / 'voc.yaml'
+    yaml_path = ROOT / 'data' / 'toy.yaml'
     input_size = 448
     train_dataset = Dataset(yaml_path=yaml_path, phase='train')
     # transformer = BasicTransform(input_size=input_size)
@@ -195,12 +216,9 @@ if __name__ == "__main__":
     color_list = generate_random_color(len(class_list))
 
     index = np.random.randint(0, len(train_dataset))
-    try:
-        filename, image, label = train_dataset.get_GT_item(index)
-        input_tensor, label = transformer(image=image, label=label)
-    except:
-        print(filename)
+    filename, image, label = train_dataset.get_GT_item(index)
+    input_tensor, label = transformer(image=image, label=label)
     image = to_image(input_tensor)
     image_with_bbox = visualize_target(image, label, class_list, color_list)
     print(filename, input_tensor.shape, label)
-    cv2.imwrite('./asset/train-data.jpg', image_with_bbox)
+    cv2.imwrite('./asset/augment.jpg', image_with_bbox)

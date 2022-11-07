@@ -15,12 +15,14 @@ from utils import set_grid
 
 
 class YoloLoss():
-    def __init__(self, num_classes, grid_size, lambda_coord=5.0, lambda_noobj=0.5):
+    def __init__(self, num_classes, grid_size):
+        self.lambda_noobj = 0.5
+        self.lambda_coord = 5.0
         self.grid_size = grid_size
-        self.lambda_coord = lambda_coord
-        self.lambda_noobj = lambda_noobj
         self.num_attributes = (1 + 4) + num_classes
-        self.mse_loss = nn.MSELoss(reduction="mean")
+        self.obj_loss_func = nn.MSELoss(reduction='none')
+        self.box_loss_func = nn.MSELoss(reduction='none')
+        self.cls_loss_func = nn.CrossEntropyLoss(reduction='none')
         grid_x, grid_y = set_grid(grid_size=self.grid_size)
         self.grid_x = grid_x.contiguous().view((1, -1))
         self.grid_y = grid_y.contiguous().view((1, -1))
@@ -32,29 +34,33 @@ class YoloLoss():
         targets = self.build_batch_target(labels).to(self.device)
 
         with torch.no_grad():
-            iou1 = self.calculate_iou(pred_box_cxcywh=predictions[:, :(self.grid_size * self.grid_size), 1:5], target_box_cxcywh=targets[..., 1:5])
-            iou2 = self.calculate_iou(pred_box_cxcywh=predictions[:, (self.grid_size * self.grid_size):, 1:5], target_box_cxcywh=targets[..., 1:5])
-            max_iou, best_box = torch.stack((iou1, iou2), dim=-1).max(dim=-1)
-            best_box = torch.cat((best_box.eq(0), best_box.eq(1)), dim=-1)
+            iou_pred_gt = self.calculate_iou(pred_box_cxcywh=predictions[..., 1:5], target_box_cxcywh=targets[..., 1:5])
 
-        positive_mask = (targets[..., 0].tile(1,2) * best_box).bool()
-        pred_obj = (predictions[..., 0])[positive_mask]
-        pred_noobj = predictions[..., 0][~positive_mask]
-        pred_box_txty = predictions[..., 1:3][positive_mask]
-        pred_box_twth = predictions[..., 3:5][positive_mask]
-        pred_cls = predictions[..., 5:][positive_mask]
+        pred_obj = predictions[..., 0]
+        pred_box_txty = predictions[..., 1:3]
+        pred_box_twth = predictions[..., 3:5]
+        pred_cls = predictions[..., 5:].permute(0, 2, 1)
 
-        true_mask = targets[..., 0].bool()
-        target_obj = (targets[..., 0] * max_iou)[true_mask]
-        target_box_txty = targets[..., 1:3][true_mask]
-        target_box_twth = targets[..., 3:5][true_mask]
-        target_cls = targets[..., 5:][true_mask]
+        target_obj = targets[..., 0]
+        target_box_txty = targets[..., 1:3]
+        target_box_twth = targets[..., 3:5]
+        target_cls = targets[..., 5].long()
 
-        obj_loss = self.mse_loss(pred_obj, target_obj)
-        noobj_loss = self.mse_loss(pred_noobj, pred_noobj * 0)
-        txty_loss = self.mse_loss(pred_box_txty, target_box_txty)
-        twth_loss = self.mse_loss(pred_box_twth.sign() * (pred_box_twth.abs() + 1e-8).sqrt(), (target_box_twth + 1e-8).sqrt())
-        cls_loss = self.mse_loss(pred_cls, target_cls)
+        obj_loss = self.obj_loss_func(pred_obj, target_obj * iou_pred_gt) * (target_obj == 1).float()
+        obj_loss = obj_loss.sum() / self.batch_size
+
+        noobj_loss = self.obj_loss_func(pred_obj, target_obj * 0) * (target_obj == 0).float()
+        noobj_loss = noobj_loss.sum() / self.batch_size
+
+        txty_loss = self.box_loss_func(pred_box_txty, target_box_txty).sum(dim=-1) * target_obj
+        txty_loss = txty_loss.sum() / self.batch_size
+
+        twth_loss = self.box_loss_func(pred_box_twth, target_box_twth).sum(dim=-1) * target_obj
+        twth_loss = twth_loss.sum() / self.batch_size
+
+        cls_loss = self.cls_loss_func(pred_cls, target_cls) * target_obj
+        cls_loss = cls_loss.sum() / self.batch_size
+
         multipart_loss = obj_loss + self.lambda_noobj * noobj_loss + self.lambda_coord * (txty_loss + twth_loss) + cls_loss
         return multipart_loss, obj_loss, noobj_loss, txty_loss, twth_loss, cls_loss
 
@@ -75,22 +81,24 @@ class YoloLoss():
                 th = item[4]
                 target[grid_j, grid_i, 0] = 1.0
                 target[grid_j, grid_i, 1:5] = torch.Tensor([tx, ty, tw, th])
-                target[grid_j, grid_i, 5 + cls_id] = 1.0
+                target[grid_j, grid_i, 5] = cls_id
             return target
-    
+
     
     def build_batch_target(self, labels):
         batch_target = torch.stack([self.build_target(label) for label in labels], dim=0)
         return batch_target.view(self.batch_size, -1,  self.num_attributes)
     
-    
+
     def calculate_iou(self, pred_box_cxcywh, target_box_cxcywh):
         pred_box_x1y1x2y2 = self.transform_cxcywh_to_x1y1x2y2(pred_box_cxcywh)
         target_box_x1y1x2y2 = self.transform_cxcywh_to_x1y1x2y2(target_box_cxcywh)
+
         x1 = torch.max(pred_box_x1y1x2y2[..., 0], target_box_x1y1x2y2[..., 0])
         y1 = torch.max(pred_box_x1y1x2y2[..., 1], target_box_x1y1x2y2[..., 1])
         x2 = torch.min(pred_box_x1y1x2y2[..., 2], target_box_x1y1x2y2[..., 2])
         y2 = torch.min(pred_box_x1y1x2y2[..., 3], target_box_x1y1x2y2[..., 3])
+        
         inter = (x2 - x1).clamp(min=0) * (y2 - y1).clamp(min=0)
         union = abs(pred_box_cxcywh[..., 2] * pred_box_cxcywh[..., 3]) + abs(target_box_cxcywh[..., 2] * target_box_cxcywh[..., 3]) - inter
         inter[inter.gt(0)] = inter[inter.gt(0)] / union[inter.gt(0)]
@@ -100,12 +108,10 @@ class YoloLoss():
     def transform_cxcywh_to_x1y1x2y2(self, boxes):
         xc = (boxes[..., 0] + self.grid_x.to(self.device)) / self.grid_size
         yc = (boxes[..., 1] + self.grid_y.to(self.device)) / self.grid_size
-        w = boxes[..., 2]
-        h = boxes[..., 3]
-        x1 = xc - w/2
-        y1 = yc - h/2
-        x2 = xc + w/2
-        y2 = yc + h/2
+        x1 = xc - boxes[..., 2] / 2
+        y1 = yc - boxes[..., 3] / 2
+        x2 = xc + boxes[..., 2] / 2
+        y2 = yc + boxes[..., 3] / 2
         return torch.stack((x1, y1, x2, y2), dim=-1)
 
 
@@ -119,27 +125,29 @@ if __name__ == "__main__":
 
     yaml_path = ROOT / 'data' / 'toy.yaml'
     input_size = 448
-    num_classes = 1
-    batch_size = 2
+    batch_size = 4
     device = torch.device('cuda')
 
     transformer = BasicTransform(input_size=input_size)
     train_dataset = Dataset(yaml_path=yaml_path, phase='train')
     train_dataset.load_transformer(transformer=transformer)
     train_loader = DataLoader(dataset=train_dataset, collate_fn=Dataset.collate_fn, batch_size=batch_size, shuffle=False, pin_memory=True, sampler=None)
-    
-    model = YoloModel(backbone="resnet18", num_classes=num_classes).to(device)
-    criterion = YoloLoss(num_classes=num_classes, grid_size=model.grid_size, lambda_coord=5.0, lambda_noobj=0.5)
+    num_classes = len(train_dataset.class_list)
+
+    model = YoloModel(input_size=input_size, backbone="resnet18", num_classes=num_classes).to(device)
+    criterion = YoloLoss(num_classes=num_classes, grid_size=model.grid_size)
     optimizer = optim.SGD(model.parameters(), lr=0.0001)
     optimizer.zero_grad()
 
     for epoch in range(15):
         model.train()
+        optimizer.zero_grad()
         for index, minibatch in enumerate(train_loader):
-            filenames, images, labels, shapes = minibatch
+            filenames, images, labels, ori_img_sizes = minibatch
             predictions = model(images.to(device))
             loss = criterion(predictions=predictions, labels=labels)
             loss[0].backward()
+
             optimizer.step()
             optimizer.zero_grad()
 

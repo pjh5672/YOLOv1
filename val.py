@@ -28,8 +28,8 @@ except:
 
 from dataloader import Dataset, BasicTransform, to_image
 from model import YoloModel
-from utils import YoloLoss, build_basic_logger, generate_random_color, transform_xcycwh_to_x1y1x2y2, \
-                  filter_confidence, run_NMS, square_to_original, transform_x1y1x2y2_to_x1y1wh, \
+from utils import build_basic_logger, generate_random_color, transform_xcycwh_to_x1y1x2y2, \
+                  filter_confidence, run_NMS, scale_to_original, transform_x1y1x2y2_to_x1y1wh, \
                   visualize_prediction, imwrite
 
 
@@ -51,11 +51,8 @@ METRIC_FORMAT = [
 
 
 @torch.no_grad()
-def validate(args, dataloader, model, criterion, epoch=0):
+def validate(args, dataloader, model, epoch=0):
     model.eval()
-    loss_type = ['multipart', 'obj', 'noobj', 'txty', 'twth', 'cls']
-    losses = defaultdict(float)
-
     with open(args.mAP_file_path, mode="r") as f:
         mAP_json = json.load(f)
 
@@ -67,15 +64,6 @@ def validate(args, dataloader, model, criterion, epoch=0):
     for i, minibatch in enumerate(dataloader):
         filenames, images, labels, shapes = minibatch
         predictions = model(images.cuda(args.rank, non_blocking=True))
-        loss = criterion(predictions=predictions, labels=labels)
-        predictions[..., 5:] *= predictions[..., [0]]
-
-        for loss_name, loss_value in zip(loss_type, loss):
-            if not torch.isfinite(loss_value) and loss_name != 'multipart':
-                print(f'############## {loss_name} Loss is Nan/Inf ! {loss_value} ##############')
-                sys.exit(0)
-            else:
-                losses[loss_name] += loss_value.item()
 
         for j in range(len(filenames)):
             prediction = predictions[j].cpu().numpy()
@@ -92,7 +80,7 @@ def validate(args, dataloader, model, criterion, epoch=0):
                 shape = shapes[j]
                 cls_id = prediction[:, [0]]
                 conf = prediction[:, [-1]]
-                box_x1y1x2y2 = square_to_original(boxes=prediction[:, 1:5], input_size=1.0, origin_size=shape)
+                box_x1y1x2y2 = scale_to_original(boxes=prediction[:, 1:5], scale_w=shape[1], scale_h=shape[0])
                 box_x1y1wh = transform_x1y1x2y2_to_x1y1wh(boxes=box_x1y1x2y2)
                 img_id = np.array((imageToid[filename],) * len(cls_id))[:, np.newaxis]
                 cocoPred.append(np.concatenate((img_id, box_x1y1wh, conf, cls_id), axis=1))
@@ -106,20 +94,14 @@ def validate(args, dataloader, model, criterion, epoch=0):
         concat_result = np.concatenate(check_results, axis=1)
         imwrite(str(args.img_log_dir / f'EP_{epoch:03d}.jpg'), concat_result)
 
-    loss_str = f"[Valid-Epoch:{epoch:03d}] "
-    for loss_name in loss_type:
-        losses[loss_name] /= len(dataloader)
-        loss_str += f"{loss_name}: {losses[loss_name]:.4f}  "
-
     if len(cocoPred) > 0:
         cocoDt = args.cocoGt.loadRes(np.concatenate(cocoPred, axis=0))
         cocoEval = COCOeval(cocoGt=args.cocoGt, cocoDt=cocoDt, iouType="bbox")
-        cocoEval.params.areaRng = [[0 ** 2, 1e5 ** 2], [0 ** 2, 32 ** 2], [32 ** 2, 96 ** 2], [96 ** 2, 1e5 ** 2]]
         cocoEval.evaluate()
         cocoEval.accumulate()
         cocoEval.summarize()
         mAP_stats = cocoEval.stats
-    return loss_str, mAP_stats
+    return mAP_stats
 
 
 def parse_args(make_dirs=True):
@@ -134,7 +116,7 @@ def parse_args(make_dirs=True):
     parser.add_argument("--ckpt_name", type=str, default="best.pt", help="Path to trained model")
     parser.add_argument("--rank", type=int, default=0, help="Process id for computation")
     parser.add_argument("--img_interval", type=int, default=10, help="Interval to log train/val image")
-    parser.add_argument("--img_log_dir", nargs='?', default = None)
+    parser.add_argument("--workers", type=int, default=4, help="Number of workers used in dataloader")
     args = parser.parse_args()
     args.data = ROOT / "data" / args.data
     args.exp_path = ROOT / 'experiment' / args.exp_name
@@ -155,20 +137,18 @@ def main():
     val_dataset = Dataset(yaml_path=args.data, phase='val')
     val_transformer = BasicTransform(input_size=args.img_size)
     val_dataset.load_transformer(transformer=val_transformer)
-    val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=args.bs, shuffle=False, pin_memory=True)
+    val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=args.bs, shuffle=False, pin_memory=True,  num_workers=args.workers)
 
     args.class_list = val_dataset.class_list
     args.color_list = generate_random_color(len(args.class_list))
 
     ckpt = torch.load(args.ckpt_path, map_location = {"cpu":"cuda:%d" %args.rank})
     model = YoloModel(backbone=args.backbone, num_classes=len(args.class_list)).cuda(args.rank)
-    criterion = YoloLoss(num_classes=len(args.class_list), grid_size=model.grid_size)
     model.load_state_dict(ckpt, strict=True)
 
     args.mAP_file_path = val_dataset.mAP_file_path
     args.cocoGt = COCO(annotation_file=args.mAP_file_path)
-    val_loss_str, mAP_stats = validate(args=args, dataloader=val_loader, model=model, criterion=criterion)
-    logger.info(val_loss_str)
+    mAP_stats = validate(args=args, dataloader=val_loader, model=model)
 
     mAP_str = "\n"
     for mAP_format, mAP_value in zip(METRIC_FORMAT, mAP_stats):

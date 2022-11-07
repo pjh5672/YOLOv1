@@ -3,7 +3,7 @@ from torch import nn
 
 def weight_init_kaiming_uniform(module):
     if isinstance(module, nn.Conv2d):
-        nn.init.kaiming_uniform_(module.weight)
+        nn.init.kaiming_normal_(module.weight, mode='fan_out', nonlinearity='relu')
     elif isinstance(module, nn.BatchNorm2d):
         module.weight.data.fill_(1.0)
         module.bias.data.fill_(0.0)

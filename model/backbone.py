@@ -97,27 +97,27 @@ class VGG16(nn.Module):
         return nn.Sequential(*layers)
 
 
-def build_backbone(model_name="resnet18", pretrained=True):
+def build_backbone(arch_name="resnet18", pretrained=True):
     feat_dims = 512
-    if model_name == "vgg16":
+    if arch_name == "vgg16":
         model = VGG16(batch_norm=False)
-    elif model_name == "vgg16_bn":
+    elif arch_name == "vgg16_bn":
         model = VGG16(batch_norm=True)
-    elif model_name == "resnet18":
+    elif arch_name == "resnet18":
         model = ResNet(BasicBlock, [2, 2, 2, 2])
-    elif model_name == "resnet34":
+    elif arch_name == "resnet34":
         model = ResNet(BasicBlock, [3, 4, 6, 3])
-    elif model_name == "resnet50":
+    elif arch_name == "resnet50":
         model = ResNet(BottleNeck, [3, 4, 6, 3])
         feat_dims = 2048
-    elif model_name == "resnet101":
+    elif arch_name == "resnet101":
         model = ResNet(BottleNeck, [3, 4, 23, 3])
         feat_dims = 2048
     else:
         raise RuntimeError("Only support model in [vgg16, vgg16_bn, resnet18, resnet34, resnet50, resnet101]")
     
     if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls[model_name]), strict=False)
+        model.load_state_dict(model_zoo.load_url(model_urls[arch_name]), strict=False)
     return model, feat_dims
 
 
@@ -127,7 +127,7 @@ if __name__ == "__main__":
 
     input_size = 448
     device = torch.device('cpu')
-    backbone, feat_dims = build_backbone(model_name="resnet50", pretrained=True)
+    backbone, feat_dims = build_backbone(arch_name="resnet18", pretrained=True)
     backbone.to(device)
 
     x = torch.randn(1, 3, input_size, input_size).to(device)
