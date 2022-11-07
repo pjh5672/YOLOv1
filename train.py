@@ -137,7 +137,7 @@ def main():
     
     model = YoloModel(input_size=args.img_size, backbone=args.backbone, num_classes=len(args.class_list))
     macs, params = profile(deepcopy(model), inputs=(torch.randn(1, 3, args.img_size, args.img_size),), verbose=False)
-    logger.info(f"Params(M): {params/1e+6:.2f}, FLOPS(B): {2*macs/1E+9:.2f}")
+    logger.info(f"YOLOv1 Architecture Info - Params(M): {params/1e+6:.2f}, FLOPS(B): {2*macs/1E+9:.2f}")
     
     model = model.cuda(args.rank)
     criterion = YoloLoss(num_classes=len(args.class_list), grid_size=model.grid_size)
