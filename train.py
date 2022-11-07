@@ -152,7 +152,7 @@ def main():
         train_loss_str = train(args=args, dataloader=train_loader, model=model, criterion=criterion, optimizer=optimizer)
         logger.info(train_loss_str)
 
-        if epoch % 10 == 0:
+        if epoch >= 10:
             mAP_stats = validate(args=args, dataloader=val_loader, model=model, epoch=epoch)
             if mAP_stats is not None:
                 ap50 = mAP_stats[1]
