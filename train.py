@@ -48,7 +48,6 @@ def train(args, dataloader, model, criterion, optimizer):
     optimizer.zero_grad()
     
     for i, minibatch in enumerate(dataloader):
-
         ni = i + len(dataloader) * epoch
         if ni <= args.nw:
             xi = [0, args.nw]
