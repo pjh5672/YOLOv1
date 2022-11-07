@@ -88,7 +88,7 @@ def parse_args(make_dirs=True):
     parser.add_argument("--img_size", type=int, default=448, help="Model input size")
     parser.add_argument("--bs", type=int, default=64, help="Batch size")
     parser.add_argument("--nbs", type=int, default=64, help="Nominal batch size")
-    parser.add_argument("--num_epochs", type=int, default=150, help="Number of training epochs")
+    parser.add_argument("--num_epochs", type=int, default=200, help="Number of training epochs")
     parser.add_argument("--warmup", type=int, default=1, help="Epochs for warming up training")
     parser.add_argument("--init_lr", type=float, default=0.0001, help="Learning rate for inital training")
     parser.add_argument("--base_lr", type=float, default=0.001, help="Base learning rate")
@@ -141,7 +141,7 @@ def main():
     model = model.cuda(args.rank)
     criterion = YoloLoss(num_classes=len(args.class_list), grid_size=model.grid_size)
     optimizer = optim.SGD(model.parameters(), lr=args.base_lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[90, 120], gamma=0.1)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[75, 105, 135], gamma=0.1)
 
     args.mAP_file_path = val_dataset.mAP_file_path
     args.cocoGt = COCO(annotation_file=args.mAP_file_path)
