@@ -33,7 +33,7 @@ except:
     elif OS_SYSTEM == 'Linux':
         subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pycocotools'])
 
-from dataloader import Dataset, BasicTransform, AugmentTransform, to_image
+from dataloader import Dataset, BasicTransform, AugmentTransform
 from model import YoloModel
 from utils import YoloLoss, generate_random_color, build_basic_logger, set_lr
 from val import validate, METRIC_FORMAT

@@ -6,9 +6,7 @@ import platform
 import argparse
 import subprocess
 from pathlib import Path
-from collections import defaultdict
 
-import cv2
 import torch
 import numpy as np
 from torch.utils.data import DataLoader
