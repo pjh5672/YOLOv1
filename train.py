@@ -139,12 +139,12 @@ def main():
     
     best_epoch, best_score, best_mAP_str = 0, 0, ""
     for epoch in range(args.num_epochs):
-        train_loader = tqdm(train_loader, desc=f"[TRAIN:{epoch:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
+        train_loader = tqdm(train_loader, desc=f"[TRAIN:{epoch+1:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
         train_loss_str = train(args=args, dataloader=train_loader, model=model, criterion=criterion, optimizer=optimizer)
         logger.info(train_loss_str)
 
-        if epoch >= 10:
-            val_loader = tqdm(val_loader, desc=f"[VAL:{epoch:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
+        if epoch >= 1:
+            val_loader = tqdm(val_loader, desc=f"[VAL:{epoch+1:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
             mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator)
             ap50 = mAP_dict["all"]["mAP_50"]
             if ap50 > best_score:
