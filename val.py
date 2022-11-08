@@ -32,7 +32,6 @@ def validate(args, dataloader, model, evaluator, epoch=0):
 
     cocoPred = []
     check_images, check_preds, check_results = [], [], []
-    mAP_stats = None
     imageToid = mAP_json["imageToid"]
 
     for i, minibatch in enumerate(dataloader):

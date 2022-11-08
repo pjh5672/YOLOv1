@@ -28,7 +28,7 @@ seed_num = 2023
 from dataloader import Dataset, BasicTransform, AugmentTransform
 from model import YoloModel
 from utils import YoloLoss, Evaluator, generate_random_color, build_basic_logger, set_lr
-from val import validate
+from val import validate, plot_result
 
 
 
@@ -155,7 +155,7 @@ def main():
         scheduler.step()
 
     torch.save(model.state_dict(), args.weight_dir / "last.pt")
-    logger.info(f"[Best mAP]\n{best_mAP_str}")
+    logger.info(f"[Best mAP at {best_epoch}]\n{best_mAP_str}")
     plot_result(args=args, mAP_dict=mAP_dict["all"], epoch=epoch)
 
 
