@@ -46,7 +46,7 @@ class YoloLoss():
         target_box_twth = targets[..., 3:5]
         target_cls = targets[..., 5].long()
 
-        obj_loss = self.obj_loss_func(pred_obj, target_obj * iou_pred_gt) * (target_obj == 1).float()
+        obj_loss = self.obj_loss_func(pred_obj * iou_pred_gt, target_obj) * (target_obj == 1).float()
         obj_loss = obj_loss.sum() / self.batch_size
 
         noobj_loss = self.obj_loss_func(pred_obj, target_obj * 0) * (target_obj == 0).float()
