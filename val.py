@@ -105,6 +105,7 @@ def parse_args(make_dirs=True):
     args.exp_path = ROOT / 'experiment' / args.exp_name
     args.ckpt_path = args.exp_path / 'weight' / args.ckpt_name
     args.img_log_dir = args.exp_path / 'val_image'
+    
     if make_dirs:
         os.makedirs(args.img_log_dir, exist_ok=True)
     return args

@@ -10,8 +10,8 @@ class YoloHead(nn.Module):
         super().__init__()
         self.num_classes = num_classes
         self.num_attributes = (1 + 4) * 1 + self.num_classes
-        self.convs = ConvBlock(in_channels=in_channels, out_channels=256)
-        self.detect = nn.Conv2d(256, self.num_attributes, kernel_size=1)
+        self.convs = ConvBlock(in_channels=in_channels, out_channels=512)
+        self.detect = nn.Conv2d(512, self.num_attributes, kernel_size=1)
         self.apply(weight_init_kaiming_uniform)
 
 
