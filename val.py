@@ -35,7 +35,7 @@ def validate(args, dataloader, model, evaluator, epoch=0):
     imageToid = mAP_json["imageToid"]
 
     for i, minibatch in enumerate(dataloader):
-        filenames, images, _, shapes = minibatch
+        filenames, images, shapes = minibatch[0], minibatch[1], minibatch[3]
         predictions = model(images.cuda(args.rank, non_blocking=True))
 
         for j in range(len(filenames)):
