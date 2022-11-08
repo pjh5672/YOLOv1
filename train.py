@@ -12,6 +12,7 @@ from collections import defaultdict
 
 import torch
 import numpy as np
+from tqdm import tqdm
 from thop import profile
 from torch import nn
 from torch import optim
@@ -24,29 +25,19 @@ TIMESTAMP = datetime.today().strftime('%Y-%m-%d_%H-%M')
 cudnn.benchmark = True
 seed_num = 2023
 
-try:
-    from pycocotools.coco import COCO
-    from pycocotools.cocoeval import COCOeval
-except:
-    if OS_SYSTEM == 'Windows':
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pycocotools-windows'])
-    elif OS_SYSTEM == 'Linux':
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pycocotools'])
-
 from dataloader import Dataset, BasicTransform, AugmentTransform
 from model import YoloModel
-from utils import YoloLoss, generate_random_color, build_basic_logger, set_lr
-from val import validate, METRIC_FORMAT
+from utils import YoloLoss, Evaluator, generate_random_color, build_basic_logger, set_lr
+from val import validate
 
 
 
 def train(args, dataloader, model, criterion, optimizer):
     loss_type = ['multipart', 'obj', 'noobj', 'txty', 'twth', 'cls']
     losses = defaultdict(float)
-
     model.train()
     optimizer.zero_grad()
-    
+
     for i, minibatch in enumerate(dataloader):
         ni = i + len(dataloader) * epoch
         if ni <= args.nw:
@@ -61,7 +52,6 @@ def train(args, dataloader, model, criterion, optimizer):
 
         if ni - args.last_opt_step >= args.accumulate:
             nn.utils.clip_grad_norm_(model.parameters(), max_norm=10.0)
-            
             optimizer.step()
             optimizer.zero_grad()
             args.last_opt_step = ni
@@ -89,6 +79,7 @@ def parse_args(make_dirs=True):
     parser.add_argument("--bs", type=int, default=64, help="Batch size")
     parser.add_argument("--nbs", type=int, default=64, help="Nominal batch size")
     parser.add_argument("--num_epochs", type=int, default=200, help="Number of training epochs")
+    parser.add_argument('--lr_decay', nargs='+', default=[75, 105], type=int, help='Epoch to learning rate decay')
     parser.add_argument("--warmup", type=int, default=1, help="Epochs for warming up training")
     parser.add_argument("--init_lr", type=float, default=0.0001, help="Learning rate for inital training")
     parser.add_argument("--base_lr", type=float, default=0.001, help="Base learning rate")
@@ -98,7 +89,7 @@ def parse_args(make_dirs=True):
     parser.add_argument("--nms_thres", type=float, default=0.6, help="Threshold to filter Box IoU of NMS process")
     parser.add_argument("--rank", type=int, default=0, help="Process id for computation")
     parser.add_argument("--img_interval", type=int, default=10, help="Interval to log train/val image")
-    parser.add_argument("--workers", type=int, default=4, help="Number of workers used in dataloader")
+    parser.add_argument("--workers", type=int, default=8, help="Number of workers used in dataloader")
     args = parser.parse_args()
     args.data = ROOT / "data" / args.data
     args.exp_path = ROOT / 'experiment' / args.exp_name
@@ -127,7 +118,7 @@ def main():
     val_transformer = BasicTransform(input_size=args.img_size)
     val_dataset.load_transformer(transformer=val_transformer)
     val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=args.bs, shuffle=False, pin_memory=True, num_workers=args.workers)
-
+    
     args.class_list = train_dataset.class_list
     args.color_list = generate_random_color(len(args.class_list))
     args.nw = max(round(args.warmup * len(train_loader)), 100)
@@ -141,29 +132,31 @@ def main():
     model = model.cuda(args.rank)
     criterion = YoloLoss(num_classes=len(args.class_list), grid_size=model.grid_size)
     optimizer = optim.SGD(model.parameters(), lr=args.base_lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[75, 105, 135], gamma=0.1)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_decay, gamma=0.1)
 
     args.mAP_file_path = val_dataset.mAP_file_path
-    args.cocoGt = COCO(annotation_file=args.mAP_file_path)
-    best_epoch, best_score, best_mAP_str = 0, 0, "\n"
+    evaluator = Evaluator(annotation_file=args.mAP_file_path)
     
+    best_epoch, best_score, best_mAP_str = 0, 0, ""
     for epoch in range(args.num_epochs):
+        train_loader = tqdm(train_loader, desc=f"[TRAIN:{epoch:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
         train_loss_str = train(args=args, dataloader=train_loader, model=model, criterion=criterion, optimizer=optimizer)
         logger.info(train_loss_str)
 
         if epoch >= 10:
-            mAP_stats = validate(args=args, dataloader=val_loader, model=model, epoch=epoch)
-            if mAP_stats is not None:
-                ap50 = mAP_stats[1]
-                if ap50 > best_score:
-                    mAP_str = "\n"
-                    for mAP_format, mAP_value in zip(METRIC_FORMAT, mAP_stats):
-                        mAP_str += f"{mAP_format} = {mAP_value:.3f}\n"
-                    logger.info(mAP_str)
-                    best_epoch, best_score, best_mAP_str = epoch, ap50, mAP_str
-                    torch.save(model.state_dict(), args.weight_dir / "best.pt")
-    scheduler.step()
+            val_loader = tqdm(val_loader, desc=f"[VAL:{epoch:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
+            mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator)
+            ap50 = mAP_dict["all"]["mAP_50"]
+            if ap50 > best_score:
+                logger.info(eval_text)
+                best_epoch, best_score, best_mAP_str = epoch, ap50, eval_text
+                torch.save(model.state_dict(), args.weight_dir / "best.pt")
+    
+        scheduler.step()
+
     torch.save(model.state_dict(), args.weight_dir / "last.pt")
+    logger.info(f"[Best mAP]\n{best_mAP_str}")
+    plot_result(args=args, mAP_dict=mAP_dict["all"], epoch=epoch)
 
 
 if __name__ == "__main__":

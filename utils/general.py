@@ -90,13 +90,13 @@ def hard_NMS(prediction, iou_threshold):
     return pick
 
 
-def run_NMS(prediction, iou_threshold, class_agnostic=False):
+def run_NMS(prediction, iou_threshold, class_agnostic=False, maxDets=100):
     if len(prediction) == 0:
         return []
 
     if class_agnostic:
         pick = hard_NMS(prediction=prediction, iou_threshold=iou_threshold)
-        return prediction[pick]
+        return prediction[pick[:maxDets]]
 
     prediction_multi_class = []
     for cls_id in np.unique(prediction[:, 0]):
@@ -105,7 +105,7 @@ def run_NMS(prediction, iou_threshold, class_agnostic=False):
         prediction_multi_class.append(pred_per_cls_id[pick_per_cls_id])
     prediction_multi_class = np.concatenate(prediction_multi_class, axis=0)
     order = prediction_multi_class[:, -1].argsort()[::-1]
-    return prediction_multi_class[order]
+    return prediction_multi_class[order[:maxDets]]
 
 
 def imwrite(filename, img):

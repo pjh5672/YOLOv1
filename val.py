@@ -9,47 +9,23 @@ from pathlib import Path
 
 import torch
 import numpy as np
+from tqdm import tqdm
 from torch.utils.data import DataLoader
 
 ROOT = Path(__file__).resolve().parents[0]
 OS_SYSTEM = platform.system()
 seed_num = 2023
 
-try:
-    from pycocotools.coco import COCO
-    from pycocotools.cocoeval import COCOeval
-except:
-    if OS_SYSTEM == 'Windows':
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pycocotools-windows'])
-    elif OS_SYSTEM == 'Linux':
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pycocotools'])
-
 from dataloader import Dataset, BasicTransform, to_image
 from model import YoloModel
-from utils import build_basic_logger, generate_random_color, transform_xcycwh_to_x1y1x2y2, \
+from utils import Evaluator, build_basic_logger, generate_random_color, transform_xcycwh_to_x1y1x2y2, \
                   filter_confidence, run_NMS, scale_to_original, transform_x1y1x2y2_to_x1y1wh, \
-                  visualize_prediction, imwrite
-
-
-METRIC_FORMAT = [
-    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Precision", "(AP)", "0.50:0.95", "all", 100),
-    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Precision", "(AP)", "0.50", "all", 100),
-    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Precision", "(AP)", "0.75", "all", 100),
-    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Precision", "(AP)", "0.50:0.95", "small", 100),
-    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Precision", "(AP)", "0.50:0.95", "medium", 100),
-    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Precision", "(AP)", "0.50:0.95", "large", 100),
-    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Recall", "(AR)", "0.50:0.95", "all", 1),
-    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Recall", "(AR)", "0.50:0.95", "all", 10),
-    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Recall", "(AR)", "0.50:0.95", "all", 100),
-    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Recall", "(AR)", "0.50:0.95", "small", 100),
-    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Recall", "(AR)", "0.50:0.95", "medium", 100),
-    "   {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ]".format("Average Recall", "(AR)", "0.50:0.95", "large", 100),
-]
+                  visualize_prediction, imwrite, analyse_mAP_info
 
 
 
 @torch.no_grad()
-def validate(args, dataloader, model, epoch=0):
+def validate(args, dataloader, model, evaluator, epoch=0):
     model.eval()
     with open(args.mAP_file_path, mode="r") as f:
         mAP_json = json.load(f)
@@ -60,6 +36,8 @@ def validate(args, dataloader, model, epoch=0):
     imageToid = mAP_json["imageToid"]
 
     for i, minibatch in enumerate(dataloader):
+        dataloader.set_description(f"[TRAIN {epoch}/{args.num_epochs}]")
+
         filenames, images, labels, shapes = minibatch
         predictions = model(images.cuda(args.rank, non_blocking=True))
 
@@ -93,13 +71,22 @@ def validate(args, dataloader, model, epoch=0):
         imwrite(str(args.img_log_dir / f'EP_{epoch:03d}.jpg'), concat_result)
 
     if len(cocoPred) > 0:
-        cocoDt = args.cocoGt.loadRes(np.concatenate(cocoPred, axis=0))
-        cocoEval = COCOeval(cocoGt=args.cocoGt, cocoDt=cocoDt, iouType="bbox")
-        cocoEval.evaluate()
-        cocoEval.accumulate()
-        cocoEval.summarize()
-        mAP_stats = cocoEval.stats
-    return mAP_stats
+        mAP_dict, eval_text = evaluator(predictions=np.concatenate(cocoPred, axis=0))
+
+    return mAP_dict, eval_text
+
+
+def plot_result(args, mAP_dict, epoch=0):
+    analysis_result = analyse_mAP_info(mAP_dict, args.class_list)
+    data_df, figure_AP, figure_dets, fig_PR_curves = analysis_result
+    data_df.to_csv(str(args.exp_path / f'dataframe_EP{epoch:03d}.csv'))
+    figure_AP.savefig(str(args.exp_path / f'figure-AP_EP{epoch:03d}.png'))
+    figure_dets.savefig(str(args.exp_path / f'figure-dets_EP{epoch:03d}.png'))
+    PR_curve_dir = args.exp_path / 'PR_curve' / f'EP{epoch:03d}'
+    os.makedirs(PR_curve_dir, exist_ok=True)
+    for class_id in fig_PR_curves.keys():
+        fig_PR_curves[class_id].savefig(str(PR_curve_dir / f'{args.class_list[class_id]}.png'))
+        fig_PR_curves[class_id].clf()
 
 
 def parse_args(make_dirs=True):
@@ -108,19 +95,19 @@ def parse_args(make_dirs=True):
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
     parser.add_argument("--backbone", type=str, default="resnet18", help="Model architecture")
     parser.add_argument("--img_size", type=int, default=448, help="Model input size")
-    parser.add_argument("--bs", type=int, default=16, help="Batch size")
-    parser.add_argument("--conf_thres", type=float, default=0.5, help="Threshold to filter confidence score")
+    parser.add_argument("--bs", type=int, default=32, help="Batch size")
+    parser.add_argument("--num_epochs", type=int, default=200, help="Number of training epochs")
+    parser.add_argument("--conf_thres", type=float, default=0.01, help="Threshold to filter confidence score")
     parser.add_argument("--nms_thres", type=float, default=0.6, help="Threshold to filter Box IoU of NMS process")
     parser.add_argument("--ckpt_name", type=str, default="best.pt", help="Path to trained model")
     parser.add_argument("--rank", type=int, default=0, help="Process id for computation")
     parser.add_argument("--img_interval", type=int, default=10, help="Interval to log train/val image")
-    parser.add_argument("--workers", type=int, default=4, help="Number of workers used in dataloader")
+    parser.add_argument("--workers", type=int, default=8, help="Number of workers used in dataloader")
     args = parser.parse_args()
     args.data = ROOT / "data" / args.data
     args.exp_path = ROOT / 'experiment' / args.exp_name
     args.ckpt_path = args.exp_path / 'weight' / args.ckpt_name
     args.img_log_dir = args.exp_path / 'val_image'
-
     if make_dirs:
         os.makedirs(args.img_log_dir, exist_ok=True)
     return args
@@ -141,18 +128,17 @@ def main():
     args.color_list = generate_random_color(len(args.class_list))
 
     ckpt = torch.load(args.ckpt_path, map_location = {"cpu":"cuda:%d" %args.rank})
-    model = YoloModel(backbone=args.backbone, num_classes=len(args.class_list)).cuda(args.rank)
+    model = YoloModel(input_size=args.img_size, backbone=args.backbone, num_classes=len(args.class_list)).cuda(args.rank)
     model.load_state_dict(ckpt, strict=True)
 
     args.mAP_file_path = val_dataset.mAP_file_path
-    args.cocoGt = COCO(annotation_file=args.mAP_file_path)
-    mAP_stats = validate(args=args, dataloader=val_loader, model=model)
+    evaluator = Evaluator(annotation_file=args.mAP_file_path)
 
-    mAP_str = "\n"
-    for mAP_format, mAP_value in zip(METRIC_FORMAT, mAP_stats):
-        mAP_str += f"{mAP_format} = {mAP_value:.3f}\n"
-    logger.info(mAP_str)
-
+    val_loader = tqdm(val_loader, desc=f"[VAL:{0:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
+    mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator)
+    logger.info(f"[Validation Result]\n{eval_text}")
+    plot_result(args=args, mAP_dict=mAP_dict["all"])
+    
 
 if __name__ == "__main__":
     main()
