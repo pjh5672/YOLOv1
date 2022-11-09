@@ -66,10 +66,10 @@ def filter_confidence(prediction, conf_threshold=0.01):
 
 
 def hard_NMS(boxes, scores, iou_threshold):
-    x1 = boxes[:, 1]
-    y1 = boxes[:, 2]
-    x2 = boxes[:, 3]
-    y2 = boxes[:, 4]
+    x1 = boxes[:, 0]
+    y1 = boxes[:, 1]
+    x2 = boxes[:, 2]
+    y2 = boxes[:, 3]
     areas = (x2 - x1) * (y2 - y1)
     order = scores.argsort()[::-1]
 
@@ -96,7 +96,9 @@ def run_NMS(prediction, iou_threshold, maxDets=100):
         inds = np.where(prediction[:, 0] == cls_id)[0]
         if len(inds) == 0:
             continue
-        cls_keep = hard_NMS(boxes=prediction[:, 1:5], scores=prediction[:, 5], iou_threshold=iou_threshold)
+        cls_boxes = prediction[inds, 1:5]
+        cls_scores = prediction[inds, 5]
+        cls_keep = hard_NMS(boxes=cls_boxes, scores=cls_scores, iou_threshold=iou_threshold)
         keep[inds[cls_keep]] = 1
     keep = np.where(keep > 0)
     prediction = prediction[keep]

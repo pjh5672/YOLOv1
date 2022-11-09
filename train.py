@@ -1,10 +1,8 @@
 import os
 import sys
-import json
 import pprint
 import platform
 import argparse
-import subprocess
 from pathlib import Path
 from copy import deepcopy
 from datetime import datetime
@@ -79,9 +77,9 @@ def parse_args(make_dirs=True):
     parser.add_argument("--bs", type=int, default=64, help="Batch size")
     parser.add_argument("--nbs", type=int, default=64, help="Nominal batch size")
     parser.add_argument("--num_epochs", type=int, default=150, help="Number of training epochs")
-    parser.add_argument('--lr_decay', nargs='+', default=[90, 120], type=int, help='Epoch to learning rate decay')
+    parser.add_argument('--lr_decay', nargs='+', default=[75, 105], type=int, help='Epoch to learning rate decay')
     parser.add_argument("--warmup", type=int, default=1, help="Epochs for warming up training")
-    parser.add_argument("--init_lr", type=float, default=0.001, help="Learning rate for inital training")
+    parser.add_argument("--init_lr", type=float, default=0.0001, help="Learning rate for inital training")
     parser.add_argument("--base_lr", type=float, default=0.01, help="Base learning rate")
     parser.add_argument("--momentum", type=float, default=0.9, help="Momentum")
     parser.add_argument("--weight_decay", type=float, default=0.0005, help="Weight decay")
@@ -153,7 +151,6 @@ def main():
                 torch.save(model.state_dict(), args.weight_dir / "best.pt")
     
         scheduler.step()
-
     torch.save(model.state_dict(), args.weight_dir / "last.pt")
     logger.info(f"[Best mAP at {best_epoch}]\n{best_mAP_str}")
     plot_result(args=args, mAP_dict=mAP_dict["all"], epoch=epoch)

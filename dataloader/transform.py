@@ -1,5 +1,4 @@
 import sys
-import math
 import random
 from pathlib import Path
 
