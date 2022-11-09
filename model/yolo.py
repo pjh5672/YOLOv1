@@ -11,6 +11,7 @@ import torch
 from torch import nn
 
 from backbone import build_backbone
+from neck import ConvBlock
 from head import YoloHead
 from utils import set_grid
 
@@ -23,7 +24,8 @@ class YoloModel(nn.Module):
         self.grid_size = input_size // self.stride
         self.num_classes = num_classes
         self.backbone, feat_dims = build_backbone(arch_name=backbone, pretrained=True)
-        self.head = YoloHead(in_channels=feat_dims, num_classes=num_classes)
+        self.neck = ConvBlock(in_channels=feat_dims, out_channels=512)
+        self.head = YoloHead(in_channels=512, num_classes=num_classes)
         grid_x, grid_y = set_grid(grid_size=self.grid_size)
         self.grid_x = grid_x.contiguous().view((1, -1))
         self.grid_y = grid_y.contiguous().view((1, -1))
@@ -33,17 +35,17 @@ class YoloModel(nn.Module):
         self.device = x.device
         
         out = self.backbone(x)
+        out = self.neck(out)
         out = self.head(out)
         out = out.permute(0, 2, 3, 1).contiguous().flatten(1, 2)
 
         pred_obj = torch.sigmoid(out[..., [0]])
-        pred_box = out[..., 1:5]
+        pred_box = torch.sigmoid(out[..., 1:5])
         pred_cls = out[..., 5:]
         
         if self.training:
             return torch.cat((pred_obj, pred_box, pred_cls), dim=-1)
         else:
-            pred_box = self.transform_pred_box(pred_box)
             pred_score = pred_obj * torch.softmax(pred_cls, dim=-1)
             pred_score, pred_label = pred_score.max(dim=-1)
             return torch.cat((pred_score.unsqueeze(-1), pred_box, pred_label.unsqueeze(-1)), dim=-1)

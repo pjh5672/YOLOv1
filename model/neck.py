@@ -1,6 +1,6 @@
 from torch import nn
 
-from element import Conv
+from element import Conv, weight_init_kaiming_uniform
 
 
 class ConvBlock(nn.Module):
@@ -13,9 +13,12 @@ class ConvBlock(nn.Module):
             Conv(out_channels, out_channels*2, kernel_size=3, padding=1),
             Conv(out_channels*2, out_channels, kernel_size=1),
         )
+        self.apply(weight_init_kaiming_uniform)
+
 
     def forward(self, x):
         return self.convs(x)
+
 
 
 if __name__ == "__main__":
@@ -25,7 +28,7 @@ if __name__ == "__main__":
     input_size = 448
     num_classes = 1
     backbone, feat_dims = build_backbone(arch_name="resnet18", pretrained=True)
-    neck = ConvBlock(in_channels=feat_dims, out_channels=256)
+    neck = ConvBlock(in_channels=feat_dims, out_channels=512)
     inp = torch.randn(1, 3, input_size, input_size)
     out = backbone(inp)
     print(out.shape)

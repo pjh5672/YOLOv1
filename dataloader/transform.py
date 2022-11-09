@@ -37,10 +37,10 @@ class AugmentTransform:
         self.flip = Albumentations(p_flipud=0.0, p_fliplr=0.5)
         self.gain_h = 0.015
         self.gain_s = 0.5
-        self.gain_v = 0.3
-        self.degrees = 5
-        self.translate = 0.2
-        self.scale = 0.4
+        self.gain_v = 0.5
+        self.degrees = 0
+        self.translate = 0.3
+        self.scale = 0.3
         self.perspective = 0.0001
     
 

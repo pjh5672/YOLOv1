@@ -37,32 +37,27 @@ class YoloLoss():
             iou_pred_gt = self.calculate_iou(pred_box_cxcywh=predictions[..., 1:5], target_box_cxcywh=targets[..., 1:5])
 
         pred_obj = predictions[..., 0]
-        pred_box_txty = predictions[..., 1:3]
-        pred_box_twth = predictions[..., 3:5]
+        pred_box = predictions[..., 1:5]
         pred_cls = predictions[..., 5:].permute(0, 2, 1)
 
         target_obj = targets[..., 0]
-        target_box_txty = targets[..., 1:3]
-        target_box_twth = targets[..., 3:5]
+        target_box = targets[..., 1:5]
         target_cls = targets[..., 5].long()
 
-        obj_loss = self.obj_loss_func(pred_obj * iou_pred_gt, target_obj) * (target_obj == 1).float()
+        obj_loss = self.obj_loss_func(pred_obj, target_obj * iou_pred_gt) * (target_obj == 1).float()
         obj_loss = obj_loss.sum() / self.batch_size
 
         noobj_loss = self.obj_loss_func(pred_obj, target_obj * 0) * (target_obj == 0).float()
         noobj_loss = noobj_loss.sum() / self.batch_size
 
-        txty_loss = self.box_loss_func(pred_box_txty, target_box_txty).sum(dim=-1) * target_obj
-        txty_loss = txty_loss.sum() / self.batch_size
-
-        twth_loss = self.box_loss_func(pred_box_twth, target_box_twth).sum(dim=-1) * target_obj
-        twth_loss = twth_loss.sum() / self.batch_size
+        box_loss = self.box_loss_func(pred_box, target_box).sum(dim=-1) * target_obj
+        box_loss = box_loss.sum() / self.batch_size
 
         cls_loss = self.cls_loss_func(pred_cls, target_cls) * target_obj
         cls_loss = cls_loss.sum() / self.batch_size
 
-        multipart_loss = obj_loss + self.lambda_noobj * noobj_loss + self.lambda_coord * (txty_loss + twth_loss) + cls_loss
-        return multipart_loss, obj_loss, noobj_loss, txty_loss, twth_loss, cls_loss
+        multipart_loss = obj_loss + self.lambda_noobj * noobj_loss + self.lambda_coord * (box_loss) + cls_loss
+        return multipart_loss, obj_loss, noobj_loss, box_loss, cls_loss
 
 
     def build_target(self, label):
@@ -152,5 +147,5 @@ if __name__ == "__main__":
             optimizer.zero_grad()
 
             if index % 50 == 0:
-                multipart_loss, obj_loss, noobj_loss, txty_loss, twth_loss, cls_loss = loss
-                print(f"[Epoch:{epoch:02d}] loss:{multipart_loss.item():.4f}, obj:{obj_loss.item():.04f}, noobj:{noobj_loss.item():.04f}, txty:{txty_loss.item():.04f}, twth:{twth_loss.item():.04f}, cls:{cls_loss.item():.04f}")
+                multipart_loss, obj_loss, noobj_loss, box_loss, cls_loss = loss
+                print(f"[Epoch:{epoch:02d}] loss:{multipart_loss.item():.4f}, obj:{obj_loss.item():.04f}, noobj:{noobj_loss.item():.04f}, box:{box_loss.item():.04f}, cls:{cls_loss.item():.04f}")

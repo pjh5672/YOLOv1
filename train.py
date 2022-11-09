@@ -33,7 +33,7 @@ from val import validate, plot_result
 
 
 def train(args, dataloader, model, criterion, optimizer):
-    loss_type = ['multipart', 'obj', 'noobj', 'txty', 'twth', 'cls']
+    loss_type = ['multipart', 'obj', 'noobj', 'box', 'cls']
     losses = defaultdict(float)
     model.train()
     optimizer.zero_grad()
@@ -78,11 +78,11 @@ def parse_args(make_dirs=True):
     parser.add_argument("--img_size", type=int, default=448, help="Model input size")
     parser.add_argument("--bs", type=int, default=64, help="Batch size")
     parser.add_argument("--nbs", type=int, default=64, help="Nominal batch size")
-    parser.add_argument("--num_epochs", type=int, default=200, help="Number of training epochs")
-    parser.add_argument('--lr_decay', nargs='+', default=[75, 105], type=int, help='Epoch to learning rate decay')
+    parser.add_argument("--num_epochs", type=int, default=150, help="Number of training epochs")
+    parser.add_argument('--lr_decay', nargs='+', default=[90, 120], type=int, help='Epoch to learning rate decay')
     parser.add_argument("--warmup", type=int, default=1, help="Epochs for warming up training")
-    parser.add_argument("--init_lr", type=float, default=0.0001, help="Learning rate for inital training")
-    parser.add_argument("--base_lr", type=float, default=0.001, help="Base learning rate")
+    parser.add_argument("--init_lr", type=float, default=0.001, help="Learning rate for inital training")
+    parser.add_argument("--base_lr", type=float, default=0.01, help="Base learning rate")
     parser.add_argument("--momentum", type=float, default=0.9, help="Momentum")
     parser.add_argument("--weight_decay", type=float, default=0.0005, help="Weight decay")
     parser.add_argument("--conf_thres", type=float, default=0.01, help="Threshold to filter confidence score")
@@ -138,14 +138,14 @@ def main():
     evaluator = Evaluator(annotation_file=args.mAP_file_path)
     
     best_epoch, best_score, best_mAP_str = 0, 0, ""
-    for epoch in range(args.num_epochs):
-        train_loader = tqdm(train_loader, desc=f"[TRAIN:{epoch+1:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
+    for epoch in range(1, args.num_epochs+1):
+        train_loader = tqdm(train_loader, desc=f"[TRAIN:{epoch:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
         train_loss_str = train(args=args, dataloader=train_loader, model=model, criterion=criterion, optimizer=optimizer)
         logger.info(train_loss_str)
 
         if epoch >= 10:
-            val_loader = tqdm(val_loader, desc=f"[VAL:{epoch+1:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
-            mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator)
+            val_loader = tqdm(val_loader, desc=f"[VAL:{epoch:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
+            mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator, epoch=epoch)
             ap50 = mAP_dict["all"]["mAP_50"]
             if ap50 > best_score:
                 logger.info(eval_text)
