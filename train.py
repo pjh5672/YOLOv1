@@ -77,10 +77,10 @@ def parse_args(make_dirs=True):
     parser.add_argument("--bs", type=int, default=64, help="Batch size")
     parser.add_argument("--nbs", type=int, default=64, help="Nominal batch size")
     parser.add_argument("--num_epochs", type=int, default=150, help="Number of training epochs")
-    parser.add_argument('--lr_decay', nargs='+', default=[75, 105], type=int, help='Epoch to learning rate decay')
+    parser.add_argument('--lr_decay', nargs='+', default=[90, 120], type=int, help='Epoch to learning rate decay')
     parser.add_argument("--warmup", type=int, default=1, help="Epochs for warming up training")
     parser.add_argument("--init_lr", type=float, default=0.0001, help="Learning rate for inital training")
-    parser.add_argument("--base_lr", type=float, default=0.01, help="Base learning rate")
+    parser.add_argument("--base_lr", type=float, default=0.001, help="Base learning rate")
     parser.add_argument("--momentum", type=float, default=0.9, help="Momentum")
     parser.add_argument("--weight_decay", type=float, default=0.0005, help="Weight decay")
     parser.add_argument("--conf_thres", type=float, default=0.01, help="Threshold to filter confidence score")
@@ -144,16 +144,21 @@ def main():
         if epoch >= 10:
             val_loader = tqdm(val_loader, desc=f"[VAL:{epoch:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
             mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator, epoch=epoch)
-            ap50 = mAP_dict["all"]["mAP_50"]
-            if ap50 > best_score:
-                logger.info(eval_text)
-                best_epoch, best_score, best_mAP_str = epoch, ap50, eval_text
-                torch.save(model.state_dict(), args.weight_dir / "best.pt")
+
+            if mAP_dict is not None:
+                ap50 = mAP_dict["all"]["mAP_50"]
+
+                if ap50 > best_score:
+                    logger.info(eval_text)
+                    best_epoch, best_score, best_mAP_str = epoch, ap50, eval_text
+                    torch.save(model.state_dict(), args.weight_dir / "best.pt")
     
+        torch.save(model.state_dict(), args.weight_dir / "last.pt")
         scheduler.step()
-    torch.save(model.state_dict(), args.weight_dir / "last.pt")
-    logger.info(f"[Best mAP at {best_epoch}]\n{best_mAP_str}")
-    plot_result(args=args, mAP_dict=mAP_dict["all"], epoch=epoch)
+
+    if mAP_dict is not None:
+        logger.info(f"[Best mAP at {best_epoch}]\n{best_mAP_str}")
+        plot_result(args=args, mAP_dict=mAP_dict["all"], epoch=epoch)
 
 
 if __name__ == "__main__":

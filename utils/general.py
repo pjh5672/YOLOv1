@@ -100,8 +100,7 @@ def run_NMS(prediction, iou_threshold, maxDets=100):
         cls_scores = prediction[inds, 5]
         cls_keep = hard_NMS(boxes=cls_boxes, scores=cls_scores, iou_threshold=iou_threshold)
         keep[inds[cls_keep]] = 1
-    keep = np.where(keep > 0)
-    prediction = prediction[keep]
+    prediction = prediction[np.where(keep > 0)]
     order = prediction[:, 5].argsort()[::-1]
     return prediction[order[:maxDets]]
 

@@ -32,7 +32,7 @@ def validate(args, dataloader, model, evaluator, epoch=0):
     check_images, check_preds, check_results = [], [], []
     imageToid = mAP_json["imageToid"]
 
-    for i, minibatch in enumerate(dataloader):
+    for _, minibatch in enumerate(dataloader):
         filenames, images, shapes = minibatch[0], minibatch[1], minibatch[3]
         predictions = model(images.cuda(args.rank, non_blocking=True))
 
@@ -67,8 +67,9 @@ def validate(args, dataloader, model, evaluator, epoch=0):
 
     if len(cocoPred) > 0:
         mAP_dict, eval_text = evaluator(predictions=np.concatenate(cocoPred, axis=0))
-
-    return mAP_dict, eval_text
+        return mAP_dict, eval_text
+    else:
+        None, None
 
 
 def plot_result(args, mAP_dict, epoch=0):
@@ -132,8 +133,9 @@ def main():
 
     val_loader = tqdm(val_loader, desc=f"[VAL:{0:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
     mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator)
-    logger.info(f"[Validation Result]\n{eval_text}")
-    plot_result(args=args, mAP_dict=mAP_dict["all"])
+    if mAP_dict is not None:
+        logger.info(f"[Validation Result]\n{eval_text}")
+        plot_result(args=args, mAP_dict=mAP_dict["all"])
     
 
 if __name__ == "__main__":

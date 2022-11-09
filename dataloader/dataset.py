@@ -143,7 +143,7 @@ class Dataset:
         labels = []
         shapes = []
         
-        for index, items in enumerate(minibatch):
+        for _, items in enumerate(minibatch):
             filenames.append(items[0])
             images.append(items[1])
             labels.append(items[2])
