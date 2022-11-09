@@ -186,4 +186,4 @@ def visualize_class_dist(class_ids, class_list, rotation=60):
     plt.xticks(rotation=rotation)
     fig = ax.get_figure()
     fig.tight_layout()
-    return 
+    return fig
