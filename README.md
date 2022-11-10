@@ -24,7 +24,7 @@ This is a repository for PyTorch implementation of YOLOv1 following the original
 | YOLOv1 VGG16<br><sup>(<u>Paper:page_with_curl:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | *not reported* | 66.4 | *not reported* | *not reported* |
 | YOLOv1 ResNet18<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 32.9 | 60.5 | 21.95 | 18.81 |
 | YOLOv1 ResNet34<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 38.0 | 65.9 | 32.06 | 33.65 |
-| YOLOv1 ResNet50<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | - | - | 35.07 | 37.58 |
+| YOLOv1 ResNet50<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 37.2 | 66.7 | 35.07 | 37.58 |
 
 <div align="center">
 

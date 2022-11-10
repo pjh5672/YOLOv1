@@ -69,16 +69,16 @@ def validate(args, dataloader, model, evaluator, epoch=0):
         mAP_dict, eval_text = evaluator(predictions=np.concatenate(cocoPred, axis=0))
         return mAP_dict, eval_text
     else:
-        None, None
+        return None, None
 
 
-def plot_result(args, mAP_dict, epoch=0):
+def result_analyis(args, mAP_dict, epoch=0):
     analysis_result = analyse_mAP_info(mAP_dict, args.class_list)
     data_df, figure_AP, figure_dets, fig_PR_curves = analysis_result
-    data_df.to_csv(str(args.exp_path / f'dataframe_EP{epoch:03d}.csv'))
-    figure_AP.savefig(str(args.exp_path / f'figure-AP_EP{epoch:03d}.png'))
-    figure_dets.savefig(str(args.exp_path / f'figure-dets_EP{epoch:03d}.png'))
-    PR_curve_dir = args.exp_path / 'PR_curve' / f'EP{epoch:03d}'
+    data_df.to_csv(str(args.exp_path / f'result_AP.csv'))
+    figure_AP.savefig(str(args.exp_path / f'figure_AP.png'))
+    figure_dets.savefig(str(args.exp_path / f'figure_dets.png'))
+    PR_curve_dir = args.exp_path / 'PR_curve' 
     os.makedirs(PR_curve_dir, exist_ok=True)
     for class_id in fig_PR_curves.keys():
         fig_PR_curves[class_id].savefig(str(PR_curve_dir / f'{args.class_list[class_id]}.png'))
@@ -121,21 +121,20 @@ def main():
     val_dataset.load_transformer(transformer=val_transformer)
     val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=args.bs, shuffle=False, pin_memory=True,  num_workers=args.workers)
 
-    args.class_list = val_dataset.class_list
+    ckpt = torch.load(args.ckpt_path, map_location = {"cpu":"cuda:%d" %args.rank})
+    args.class_list = ckpt["class_list"]
     args.color_list = generate_random_color(len(args.class_list))
 
-    ckpt = torch.load(args.ckpt_path, map_location = {"cpu":"cuda:%d" %args.rank})
     model = YoloModel(input_size=args.img_size, backbone=args.backbone, num_classes=len(args.class_list)).cuda(args.rank)
-    model.load_state_dict(ckpt, strict=True)
+    model.load_state_dict(ckpt["model_state"], strict=True)
 
     args.mAP_file_path = val_dataset.mAP_file_path
     evaluator = Evaluator(annotation_file=args.mAP_file_path)
 
     val_loader = tqdm(val_loader, desc=f"[VAL:{0:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
     mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator)
-    if mAP_dict is not None:
-        logger.info(f"[Validation Result]\n{eval_text}")
-        plot_result(args=args, mAP_dict=mAP_dict["all"])
+    logger.info(f"[Validation Result]\n{eval_text}")
+    result_analyis(args=args, mAP_dict=mAP_dict["all"])
     
 
 if __name__ == "__main__":

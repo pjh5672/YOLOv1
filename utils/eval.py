@@ -69,7 +69,7 @@ class Evaluator():
         AP_50_per_class, PR_50_pts_per_class = {}, {}
         num_true_per_class, num_positive_per_class, num_TP_50_per_class, num_FP_50_per_class = {}, {}, {}, {}
         mAP_50, mAP_75, mAP_5095 = 0, 0, 0
-        valid_num_classes = 0
+        valid_num_classes = 0 + 1E-8
 
         for res in classAP_data:
             if res["total_positive"] > 0:

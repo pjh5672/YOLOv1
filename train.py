@@ -10,7 +10,7 @@ from collections import defaultdict
 
 import torch
 import numpy as np
-from tqdm import tqdm
+from tqdm import tqdm, trange
 from thop import profile
 from torch import nn
 from torch import optim
@@ -26,7 +26,7 @@ seed_num = 2023
 from dataloader import Dataset, BasicTransform, AugmentTransform
 from model import YoloModel
 from utils import YoloLoss, Evaluator, generate_random_color, build_basic_logger, set_lr
-from val import validate, plot_result
+from val import validate, result_analyis
 
 
 
@@ -71,6 +71,7 @@ def train(args, dataloader, model, criterion, optimizer):
 def parse_args(make_dirs=True):
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp_name", type=str, required=True, help="Name to log training")
+    parser.add_argument("--resume", type=str, nargs='?', const=True ,help="Name to resume path")
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
     parser.add_argument("--backbone", type=str, default="resnet18", help="Model architecture")
     parser.add_argument("--img_size", type=int, default=448, help="Model input size")
@@ -93,6 +94,7 @@ def parse_args(make_dirs=True):
     args.exp_path = ROOT / 'experiment' / args.exp_name
     args.weight_dir = args.exp_path / 'weight'
     args.img_log_dir = args.exp_path / 'train_image'
+    args.load_path = args.weight_dir / 'last.pt' if args.resume else None
 
     if make_dirs:
         os.makedirs(args.weight_dir, exist_ok=True)
@@ -106,7 +108,6 @@ def main():
     torch.manual_seed(seed_num)
     args = parse_args(make_dirs=True)
     logger = build_basic_logger(args.exp_path / 'train.log', set_level=1)
-    logger.info(f"[Arguments]\n{pprint.pformat(vars(args))}\n")
 
     train_dataset = Dataset(yaml_path=args.data, phase='train')
     train_transformer = AugmentTransform(input_size=args.img_size)
@@ -122,43 +123,63 @@ def main():
     args.nw = max(round(args.warmup * len(train_loader)), 100)
     args.accumulate = max(round(args.nbs / args.bs), 1)
     args.last_opt_step = -1
-    
+    args.mAP_file_path = val_dataset.mAP_file_path
+
     model = YoloModel(input_size=args.img_size, backbone=args.backbone, num_classes=len(args.class_list))
     macs, params = profile(deepcopy(model), inputs=(torch.randn(1, 3, args.img_size, args.img_size),), verbose=False)
-    logger.info(f"YOLOv1 Architecture Info - Params(M): {params/1e+6:.2f}, FLOPS(B): {2*macs/1E+9:.2f}")
-    
     model = model.cuda(args.rank)
     criterion = YoloLoss(num_classes=len(args.class_list), grid_size=model.grid_size)
     optimizer = optim.SGD(model.parameters(), lr=args.base_lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_decay, gamma=0.1)
-
-    args.mAP_file_path = val_dataset.mAP_file_path
     evaluator = Evaluator(annotation_file=args.mAP_file_path)
-    
-    best_epoch, best_score, best_mAP_str = 0, 0, ""
-    for epoch in range(1, args.num_epochs+1):
+
+    if args.resume:
+        assert args.load_path.is_file(), "Not exist trained weights in the directory path !"
+        
+        ckpt = torch.load(args.load_path, map_location='cpu')
+        start_epoch = ckpt["running_epoch"]
+        model.load_state_dict(ckpt["model_state"], strict=True)
+        optimizer.load_state_dict(ckpt["optimizer_state"])
+        scheduler.load_state_dict(ckpt["scheduler_state"])
+        for state in optimizer.state.values():
+            for k, v in state.items():
+                if isinstance(v, torch.Tensor):
+                    state[k] = v.cuda(args.rank)
+    else:
+        start_epoch = 1
+        logger.info(f"[Arguments]\n{pprint.pformat(vars(args))}\n")
+        logger.info(f"YOLOv1 Architecture Info - Params(M): {params/1e+6:.2f}, FLOPS(B): {2*macs/1E+9:.2f}")
+
+    progress_bar = trange(start_epoch, args.num_epochs, total=args.num_epochs, initial=start_epoch, ncols=115)
+    best_epoch, best_score, best_mAP_str, mAP_dict = 0, 0, "", None
+    for epoch in progress_bar:
         train_loader = tqdm(train_loader, desc=f"[TRAIN:{epoch:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
         train_loss_str = train(args=args, dataloader=train_loader, model=model, criterion=criterion, optimizer=optimizer)
         logger.info(train_loss_str)
 
+        save_opt = {"running_epoch": epoch,
+                    "class_list": args.class_list,
+                    "model_state": model.state_dict(),
+                    "optimizer_state": optimizer.state_dict(),
+                    "scheduler_state": scheduler.state_dict()}
+
         if epoch >= 10:
             val_loader = tqdm(val_loader, desc=f"[VAL:{epoch:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
             mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator, epoch=epoch)
+            ap50 = mAP_dict["all"]["mAP_50"]
 
-            if mAP_dict is not None:
-                ap50 = mAP_dict["all"]["mAP_50"]
-
-                if ap50 > best_score:
-                    logger.info(eval_text)
-                    best_epoch, best_score, best_mAP_str = epoch, ap50, eval_text
-                    torch.save(model.state_dict(), args.weight_dir / "best.pt")
+            if ap50 > best_score:
+                logger.info(eval_text)
+                result_analyis(args=args, mAP_dict=mAP_dict["all"], epoch=epoch)
+                best_epoch, best_score, best_mAP_str = epoch, ap50, eval_text
+                torch.save(save_opt, args.weight_dir / "best.pt")
     
-        torch.save(model.state_dict(), args.weight_dir / "last.pt")
+        torch.save(save_opt, args.weight_dir / "last.pt")
         scheduler.step()
 
-    if mAP_dict is not None:
+    if mAP_dict:
         logger.info(f"[Best mAP at {best_epoch}]\n{best_mAP_str}")
-        plot_result(args=args, mAP_dict=mAP_dict["all"], epoch=epoch)
+        
 
 
 if __name__ == "__main__":
