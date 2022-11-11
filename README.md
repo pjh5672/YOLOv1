@@ -14,7 +14,7 @@
 
 ## [Description]
 
-This is a repository for PyTorch implementation of YOLOv1 following the original paper(https://arxiv.org/abs/1506.02640). 
+This is a repository for PyTorch implementation of YOLOv1 following the original paper (https://arxiv.org/abs/1506.02640). 
 
  - **Performance Table**
 
