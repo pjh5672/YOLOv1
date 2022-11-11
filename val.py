@@ -4,6 +4,7 @@ import pprint
 import platform
 import argparse
 from pathlib import Path
+from datetime import datetime
 
 import torch
 import numpy as np
@@ -11,6 +12,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 
 ROOT = Path(__file__).resolve().parents[0]
+TIMESTAMP = datetime.today().strftime('%Y-%m-%d_%H-%M')
 OS_SYSTEM = platform.system()
 seed_num = 2023
 
@@ -23,7 +25,7 @@ from utils import Evaluator, build_basic_logger, generate_random_color, transfor
 
 
 @torch.no_grad()
-def validate(args, dataloader, model, evaluator, epoch=0):
+def validate(args, dataloader, model, evaluator, epoch=0, save_result=False):
     model.eval()
     with open(args.mAP_file_path, mode="r") as f:
         mAP_json = json.load(f)
@@ -66,7 +68,12 @@ def validate(args, dataloader, model, evaluator, epoch=0):
         imwrite(str(args.img_log_dir / f'EP_{epoch:03d}.jpg'), concat_result)
 
     if len(cocoPred) > 0:
-        mAP_dict, eval_text = evaluator(predictions=np.concatenate(cocoPred, axis=0))
+        cocoPred = np.concatenate(cocoPred, axis=0)
+        mAP_dict, eval_text = evaluator(predictions=cocoPred)
+
+        if save_result:
+            np.savetxt(args.exp_path / 'predictions.txt', cocoPred, fmt='%.4f', delimiter=',', header=f"Inference results of [image_id, x1y1wh, score, label] on {TIMESTAMP}") 
+
         return mAP_dict, eval_text
     else:
         return None, None
@@ -76,12 +83,12 @@ def result_analyis(args, mAP_dict, epoch=0):
     analysis_result = analyse_mAP_info(mAP_dict, args.class_list)
     data_df, figure_AP, figure_dets, fig_PR_curves = analysis_result
     data_df.to_csv(str(args.exp_path / f'result_AP.csv'))
-    figure_AP.savefig(str(args.exp_path / f'figure_AP.png'))
-    figure_dets.savefig(str(args.exp_path / f'figure_dets.png'))
+    figure_AP.savefig(str(args.exp_path / f'figure_AP.jpg'))
+    figure_dets.savefig(str(args.exp_path / f'figure_dets.jpg'))
     PR_curve_dir = args.exp_path / 'PR_curve' 
     os.makedirs(PR_curve_dir, exist_ok=True)
     for class_id in fig_PR_curves.keys():
-        fig_PR_curves[class_id].savefig(str(PR_curve_dir / f'{args.class_list[class_id]}.png'))
+        fig_PR_curves[class_id].savefig(str(PR_curve_dir / f'{args.class_list[class_id]}.jpg'))
         fig_PR_curves[class_id].clf()
 
 
@@ -124,15 +131,19 @@ def main():
     ckpt = torch.load(args.ckpt_path, map_location = {"cpu":"cuda:%d" %args.rank})
     args.class_list = ckpt["class_list"]
     args.color_list = generate_random_color(len(args.class_list))
+    args.mAP_file_path = val_dataset.mAP_file_path
 
     model = YoloModel(input_size=args.img_size, backbone=args.backbone, num_classes=len(args.class_list)).cuda(args.rank)
     model.load_state_dict(ckpt["model_state"], strict=True)
-
-    args.mAP_file_path = val_dataset.mAP_file_path
     evaluator = Evaluator(annotation_file=args.mAP_file_path)
 
-    val_loader = tqdm(val_loader, desc=f"[VAL:{0:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
-    mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator)
+    if (args.exp_path / 'predictions.txt').is_file():
+        cocoPred = np.loadtxt(args.exp_path / 'predictions.txt', delimiter = ',', skiprows=1)
+        mAP_dict, eval_text = evaluator(predictions=cocoPred)
+    else:
+        val_loader = tqdm(val_loader, desc=f"[VAL:{0:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
+        mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator, save_result=True)
+    
     logger.info(f"[Validation Result]\n{eval_text}")
     result_analyis(args=args, mAP_dict=mAP_dict["all"])
     
