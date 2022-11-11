@@ -14,7 +14,7 @@
 
 ## [Description]
 
-This is a repository for PyTorch implementation of YOLOv1 following the original paper(https://arxiv.org/abs/1506.02640). You can download related weight files from [HERE !](https://drive.google.com/drive/folders/15qXxbD7RG19uZBhG3NPWwfqt6OdksAPR?usp=sharing)
+This is a repository for PyTorch implementation of YOLOv1 following the original paper(https://arxiv.org/abs/1506.02640). 
 
  - **Performance Table**
 
