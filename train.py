@@ -128,7 +128,7 @@ def main():
     model = YoloModel(input_size=args.img_size, backbone=args.backbone, num_classes=len(args.class_list))
     macs, params = profile(deepcopy(model), inputs=(torch.randn(1, 3, args.img_size, args.img_size),), verbose=False)
     model = model.cuda(args.rank)
-    criterion = YoloLoss(num_classes=len(args.class_list), grid_size=model.grid_size)
+    criterion = YoloLoss(grid_size=model.grid_size)
     optimizer = optim.SGD(model.parameters(), lr=args.base_lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_decay, gamma=0.1)
     evaluator = Evaluator(annotation_file=args.mAP_file_path)
@@ -180,7 +180,6 @@ def main():
     if mAP_dict:
         logger.info(f"[Best mAP at {best_epoch}]\n{best_mAP_str}")
         
-
 
 if __name__ == "__main__":
     main()

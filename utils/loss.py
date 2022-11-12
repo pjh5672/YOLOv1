@@ -14,11 +14,11 @@ from utils import set_grid
 
 
 class YoloLoss():
-    def __init__(self, num_classes, grid_size):
+    def __init__(self, grid_size):
         self.lambda_noobj = 0.5
         self.lambda_coord = 5.0
         self.grid_size = grid_size
-        self.num_attributes = (1 + 4) + num_classes
+        self.num_attributes = 1 + 4 + 1
         self.obj_loss_func = nn.MSELoss(reduction='none')
         self.box_loss_func = nn.MSELoss(reduction='none')
         self.cls_loss_func = nn.CrossEntropyLoss(reduction='none')
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     num_classes = len(train_dataset.class_list)
 
     model = YoloModel(input_size=input_size, backbone="resnet18", num_classes=num_classes).to(device)
-    criterion = YoloLoss(num_classes=num_classes, grid_size=model.grid_size)
+    criterion = YoloLoss(grid_size=model.grid_size)
     optimizer = optim.SGD(model.parameters(), lr=0.0001)
     optimizer.zero_grad()
 
