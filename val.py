@@ -79,7 +79,7 @@ def validate(args, dataloader, model, evaluator, epoch=0, save_result=False):
         return None, None
 
 
-def result_analyis(args, mAP_dict, epoch=0):
+def result_analyis(args, mAP_dict):
     analysis_result = analyse_mAP_info(mAP_dict, args.class_list)
     data_df, figure_AP, figure_dets, fig_PR_curves = analysis_result
     data_df.to_csv(str(args.exp_path / f'result_AP.csv'))
@@ -99,7 +99,7 @@ def parse_args(make_dirs=True):
     parser.add_argument("--backbone", type=str, default="resnet18", help="Model architecture")
     parser.add_argument("--img_size", type=int, default=448, help="Model input size")
     parser.add_argument("--bs", type=int, default=32, help="Batch size")
-    parser.add_argument("--num_epochs", type=int, default=200, help="Number of training epochs")
+    parser.add_argument("--num_epochs", type=int, default=1, help="Number of training epochs")
     parser.add_argument("--conf_thres", type=float, default=0.01, help="Threshold to filter confidence score")
     parser.add_argument("--nms_thres", type=float, default=0.6, help="Threshold to filter Box IoU of NMS process")
     parser.add_argument("--ckpt_name", type=str, default="best.pt", help="Path to trained model")
