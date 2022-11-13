@@ -21,7 +21,8 @@ ROOT = Path(__file__).resolve().parents[0]
 OS_SYSTEM = platform.system()
 TIMESTAMP = datetime.today().strftime('%Y-%m-%d_%H-%M')
 cudnn.benchmark = True
-seed_num = 2023
+SEED = 2023
+torch.manual_seed(SEED)
 
 from dataloader import Dataset, BasicTransform, AugmentTransform
 from model import YoloModel
@@ -105,7 +106,6 @@ def parse_args(make_dirs=True):
 def main():
     global epoch, logger
     
-    torch.manual_seed(seed_num)
     args = parse_args(make_dirs=True)
     logger = build_basic_logger(args.exp_path / 'train.log', set_level=1)
 

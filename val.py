@@ -14,7 +14,8 @@ from torch.utils.data import DataLoader
 ROOT = Path(__file__).resolve().parents[0]
 TIMESTAMP = datetime.today().strftime('%Y-%m-%d_%H-%M')
 OS_SYSTEM = platform.system()
-seed_num = 2023
+SEED = 2023
+torch.manual_seed(SEED)
 
 from dataloader import Dataset, BasicTransform, to_image
 from model import YoloModel
@@ -118,7 +119,6 @@ def parse_args(make_dirs=True):
 
 
 def main():
-    torch.manual_seed(seed_num)
     args = parse_args(make_dirs=True)
     logger = build_basic_logger(args.exp_path / 'val.log', set_level=1)
     logger.info(f"[Arguments]\n{pprint.pformat(vars(args))}\n")
