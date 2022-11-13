@@ -37,7 +37,7 @@ def train(args, dataloader, model, criterion, optimizer):
     optimizer.zero_grad()
 
     for i, minibatch in enumerate(dataloader):
-        ni = i + len(dataloader) * epoch
+        ni = i + len(dataloader) * (epoch - 1) 
         if ni <= args.nw:
             xi = [0, args.nw]
             args.accumulate = max(1, np.interp(ni, xi, [1, args.nbs / args.bs]).round())
