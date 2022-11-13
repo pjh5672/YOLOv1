@@ -12,6 +12,7 @@ from general import transform_xcycwh_to_x1y1x2y2, scale_to_original
 
 
 matplotlib.use('Agg')
+plt.rcParams.update({'figure.max_open_warning': 0})
 TEXT_COLOR = (255, 255, 255)
 
 
@@ -126,20 +127,18 @@ def visualize_detect_rate_per_class(data_df):
 
 def visualize_PR_curve_per_class(pr_pts_per_class, class_list):
     fig_PR_curves = {}
-    
-    with plt.rc_context(rc={'figure.max_open_warning': 0}):
-        for class_id in pr_pts_per_class.keys():
-            mprec = pr_pts_per_class[class_id]['mprec'][::-1][1:]
-            mrec = pr_pts_per_class[class_id]['mrec'][::-1][1:]
-            
-            plt.figure(figsize=(4, 4))
-            ax = sns.lineplot(x=mrec, y=mprec, estimator=None, sort=False)
-            ax.set(xlabel='Recalls', ylabel='Precisions')
-            ax.set_title(label=f'Category: {class_list[class_id]}', fontsize=12)
-            plt.grid('on')
-            fig = ax.get_figure()
-            fig.tight_layout()
-            fig_PR_curves[class_id] = fig
+    for class_id in pr_pts_per_class.keys():
+        mprec = pr_pts_per_class[class_id]['mprec'][::-1][1:]
+        mrec = pr_pts_per_class[class_id]['mrec'][::-1][1:]
+        
+        plt.figure(figsize=(4, 4))
+        ax = sns.lineplot(x=mrec, y=mprec, estimator=None, sort=False)
+        ax.set(xlabel='Recalls', ylabel='Precisions')
+        ax.set_title(label=f'Category: {class_list[class_id]}', fontsize=12)
+        plt.grid('on')
+        fig = ax.get_figure()
+        fig.tight_layout()
+        fig_PR_curves[class_id] = fig
     return fig_PR_curves
     
 
