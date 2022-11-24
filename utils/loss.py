@@ -4,8 +4,7 @@ from pathlib import Path
 import torch
 from torch import nn
 
-FILE = Path(__file__).resolve()
-ROOT = FILE.parents[1]
+ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
@@ -39,14 +38,15 @@ class YoloLoss():
         pred_box = predictions[..., 1:5]
         pred_cls = predictions[..., 5:].permute(0, 2, 1)
 
-        target_obj = targets[..., 0]
+        target_obj = (targets[..., 0] == 1).float()
+        target_noobj = (targets[..., 0] == 0).float()
         target_box = targets[..., 1:5]
         target_cls = targets[..., 5].long()
 
-        obj_loss = self.obj_loss_func(pred_obj, target_obj * iou_pred_gt) * (target_obj == 1).float()
+        obj_loss = self.obj_loss_func(pred_obj, iou_pred_gt) * target_obj
         obj_loss = obj_loss.sum() / self.batch_size
 
-        noobj_loss = self.obj_loss_func(pred_obj, target_obj * 0) * (target_obj == 0).float()
+        noobj_loss = self.obj_loss_func(pred_obj, target_obj * 0) * target_noobj
         noobj_loss = noobj_loss.sum() / self.batch_size
 
         box_loss = self.box_loss_func(pred_box, target_box).sum(dim=-1) * target_obj
@@ -120,7 +120,7 @@ if __name__ == "__main__":
     yaml_path = ROOT / 'data' / 'toy.yaml'
     input_size = 448
     batch_size = 4
-    device = torch.device('cuda')
+    device = torch.device('cpu')
 
     transformer = BasicTransform(input_size=input_size)
     train_dataset = Dataset(yaml_path=yaml_path, phase='train')

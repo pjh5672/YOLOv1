@@ -1,8 +1,6 @@
 import torch
 from torch import nn
 
-from element import weight_init_kaiming_uniform
-
 
 
 class YoloHead(nn.Module):
@@ -11,7 +9,6 @@ class YoloHead(nn.Module):
         self.num_classes = num_classes
         self.num_attributes = (1 + 4) * 1 + self.num_classes
         self.detect = nn.Conv2d(in_channels, self.num_attributes, kernel_size=1)
-        self.apply(weight_init_kaiming_uniform)
 
 
     def forward(self, x):

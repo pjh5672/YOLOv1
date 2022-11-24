@@ -74,7 +74,6 @@ def validate(args, dataloader, model, evaluator, epoch=0, save_result=False):
 
         if save_result:
             np.savetxt(args.exp_path / 'predictions.txt', cocoPred, fmt='%.4f', delimiter=',', header=f"Inference results of [image_id, x1y1wh, score, label] on {TIMESTAMP}") 
-
         return mAP_dict, eval_text
     else:
         return None, None
@@ -95,13 +94,13 @@ def result_analyis(args, mAP_dict):
 
 def parse_args(make_dirs=True):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--exp_name", type=str, required=True, help="Name to log training")
+    parser.add_argument("--exp", type=str, required=True, help="Name to log training")
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
     parser.add_argument("--backbone", type=str, default="resnet18", help="Model architecture")
     parser.add_argument("--img_size", type=int, default=448, help="Model input size")
-    parser.add_argument("--bs", type=int, default=32, help="Batch size")
+    parser.add_argument("--batch_size", type=int, default=16, help="Batch size")
     parser.add_argument("--num_epochs", type=int, default=1, help="Number of training epochs")
-    parser.add_argument("--conf_thres", type=float, default=0.01, help="Threshold to filter confidence score")
+    parser.add_argument("--conf_thres", type=float, default=0.001, help="Threshold to filter confidence score")
     parser.add_argument("--nms_thres", type=float, default=0.6, help="Threshold to filter Box IoU of NMS process")
     parser.add_argument("--ckpt_name", type=str, default="best.pt", help="Path to trained model")
     parser.add_argument("--rank", type=int, default=0, help="Process id for computation")
@@ -109,7 +108,7 @@ def parse_args(make_dirs=True):
     parser.add_argument("--workers", type=int, default=8, help="Number of workers used in dataloader")
     args = parser.parse_args()
     args.data = ROOT / "data" / args.data
-    args.exp_path = ROOT / 'experiment' / args.exp_name
+    args.exp_path = ROOT / 'experiment' / args.exp
     args.ckpt_path = args.exp_path / 'weight' / args.ckpt_name
     args.img_log_dir = args.exp_path / 'val_image'
     
@@ -120,21 +119,23 @@ def parse_args(make_dirs=True):
 
 def main():
     args = parse_args(make_dirs=True)
-    logger = build_basic_logger(args.exp_path / 'val.log', set_level=1)
+    logger = build_basic_logger(args.exp_path / "val.log", set_level=1)
     logger.info(f"[Arguments]\n{pprint.pformat(vars(args))}\n")
 
-    val_dataset = Dataset(yaml_path=args.data, phase='val')
+    val_dataset = Dataset(yaml_path=args.data, phase="val")
     val_transformer = BasicTransform(input_size=args.img_size)
     val_dataset.load_transformer(transformer=val_transformer)
-    val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=args.bs, shuffle=False, pin_memory=True,  num_workers=args.workers)
+    val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=args.batch_size, 
+                            shuffle=False, pin_memory=True, num_workers=args.workers)
 
     ckpt = torch.load(args.ckpt_path, map_location = {"cpu":"cuda:%d" %args.rank})
     args.class_list = ckpt["class_list"]
     args.color_list = generate_random_color(len(args.class_list))
     args.mAP_file_path = val_dataset.mAP_file_path
 
-    model = YoloModel(input_size=args.img_size, backbone=args.backbone, num_classes=len(args.class_list)).cuda(args.rank)
+    model = YoloModel(input_size=args.img_size, backbone=args.backbone, num_classes=len(args.class_list))
     model.load_state_dict(ckpt["model_state"], strict=True)
+    model = model.cuda(args.rank)
     evaluator = Evaluator(annotation_file=args.mAP_file_path)
 
     if (args.exp_path / 'predictions.txt').is_file():

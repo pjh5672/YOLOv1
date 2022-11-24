@@ -1,4 +1,4 @@
-PATH: d:/DATASET/PASCAL-VOC/
+PATH: d:/DATASET/PASCAL-VOC
 
 TRAIN: 
  - images/train2007

@@ -4,6 +4,7 @@ import torch
 import numpy as np
 
 
+
 def set_grid(grid_size):
     grid_y, grid_x = torch.meshgrid((torch.arange(grid_size), torch.arange(grid_size)), indexing="ij")
     return (grid_x, grid_y)
@@ -23,12 +24,6 @@ def scale_to_original(boxes, scale_w, scale_h):
 def scale_to_norm(boxes, image_w, image_h):
     boxes[:,[0,2]] /= image_w
     boxes[:,[1,3]] /= image_h
-    return boxes
-
-
-def clip_box_coordinate(boxes):
-    boxes = transform_xcycwh_to_x1y1x2y2(boxes)
-    boxes = transform_x1y1x2y2_to_xcycwh(boxes)
     return boxes
 
 

@@ -1,6 +1,6 @@
 from torch import nn
+from element import Conv
 
-from element import Conv, weight_init_kaiming_uniform
 
 
 class ConvBlock(nn.Module):
@@ -13,7 +13,6 @@ class ConvBlock(nn.Module):
             Conv(out_channels, out_channels*2, kernel_size=3, padding=1),
             Conv(out_channels*2, out_channels, kernel_size=1),
         )
-        self.apply(weight_init_kaiming_uniform)
 
 
     def forward(self, x):

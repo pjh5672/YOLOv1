@@ -312,5 +312,3 @@ class Evaluator():
             elif self.areaRng[3][0] <= dt["area"] < self.areaRng[3][1]:
                 res[self.areaRngLbl[3]].append(dt)
         return res
-
-

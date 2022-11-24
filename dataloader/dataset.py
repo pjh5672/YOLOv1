@@ -9,14 +9,13 @@ import torch
 import numpy as np
 from tqdm import tqdm
 
-from transform import *
+from transform import BasicTransform, AugmentTransform, to_tensor
 
-FILE = Path(__file__).resolve()
-ROOT = FILE.parents[1]
+ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from utils import clip_box_coordinate, transform_xcycwh_to_x1y1wh
+from utils import transform_xcycwh_to_x1y1wh
 
 
 
@@ -27,6 +26,8 @@ class Dataset:
             
         self.phase = phase
         self.class_list = data_item["CLASS_INFO"]
+        self.anchors = data_item['ANCHORS'] if "ANCHORS" in data_item else None
+        
         self.image_paths = []
         for sub_dir in data_item[self.phase.upper()]:
             image_dir = Path(data_item["PATH"]) / sub_dir
@@ -44,11 +45,11 @@ class Dataset:
 
     def __getitem__(self, index):
         filename, image, label = self.get_GT_item(index)
-        input_tensor, label = self.transformer(image=image, label=label)
-        label[:, 1:5] = clip_box_coordinate(label[:, 1:5])
-        label = torch.from_numpy(label)
         shape = image.shape
-        return filename, input_tensor, label, shape
+        image, boxes, labels = self.transformer(image=image, boxes=label[:, 1:5], labels=label[:, 0])
+        img_tensor = to_tensor(image)
+        label = torch.from_numpy(np.concatenate((labels[:, np.newaxis], boxes), axis=1))
+        return filename, img_tensor, label, shape
 
     
     def get_GT_item(self, index):
@@ -61,7 +62,6 @@ class Dataset:
     def get_image(self, index):
         filename = self.image_paths[index].split(os.sep)[-1]
         image = cv2.imread(self.image_paths[index])
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return filename, image
 
 
@@ -85,7 +85,7 @@ class Dataset:
 
     def check_no_label(self, label):
         if len(label) == 0:
-            label = np.array([[-1, 0.5, 0.5, 1.0, 1.0]], dtype=np.float32)
+            label = np.array([[-1, 0, 0, 0, 0]], dtype=np.float32)
         return label
 
 
@@ -151,13 +151,9 @@ class Dataset:
         return filenames, torch.stack(images, dim=0), labels, shapes
 
 
-
 if __name__ == "__main__":
-    FILE = Path(__file__).resolve()
-    ROOT = FILE.parents[1]
-    
     yaml_path = ROOT / 'data' / 'toy.yaml'
-    input_size = 448
+    input_size = 416
     
     train_dataset = Dataset(yaml_path=yaml_path, phase='train')
     train_transformer = AugmentTransform(input_size=input_size)
@@ -168,9 +164,9 @@ if __name__ == "__main__":
 
     print(len(train_dataset), len(val_dataset))
     for index, minibatch in enumerate(train_dataset):
-        filename, input_tensor, label, shapes = train_dataset[index]
+        filename, image, label, shape = train_dataset[index]
     print(f"train dataset sanity-check done")
 
     for index, minibatch in enumerate(val_dataset):
-        filename, image, label, shapes = val_dataset[index]
+        filename, image, label, shape = val_dataset[index]
     print(f"val dataset sanity-check done")
