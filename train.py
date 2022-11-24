@@ -1,5 +1,6 @@
 import os
 import sys
+import random
 import pprint
 import platform
 import argparse
@@ -22,6 +23,7 @@ OS_SYSTEM = platform.system()
 TIMESTAMP = datetime.today().strftime('%Y-%m-%d_%H-%M')
 cudnn.benchmark = True
 SEED = 2023
+random.seed(SEED)
 torch.manual_seed(SEED)
 
 from dataloader import Dataset, BasicTransform, AugmentTransform
@@ -40,21 +42,15 @@ def train(args, dataloader, model, criterion, optimizer):
     for i, minibatch in enumerate(dataloader):
         ni = i + len(dataloader) * (epoch - 1) 
         if ni <= args.nw:
-            xi = [0, args.nw]
-            args.accumulate = max(1, np.interp(ni, xi, [1, args.nbs / args.bs]).round())
-            set_lr(optimizer, np.interp(ni, xi, [args.init_lr, args.base_lr]))
+            set_lr(optimizer, args.base_lr * pow(ni / (args.nw), 4))
 
         images, labels = minibatch[1], minibatch[2]
         predictions = model(images.cuda(args.rank, non_blocking=True))
         loss = criterion(predictions=predictions, labels=labels)
         loss[0].backward()
-
-        if ni - args.last_opt_step >= args.accumulate:
-            nn.utils.clip_grad_norm_(model.parameters(), max_norm=10.0)
-            optimizer.step()
-            optimizer.zero_grad()
-            args.last_opt_step = ni
-    
+        optimizer.step()
+        optimizer.zero_grad()
+        
         for loss_name, loss_value in zip(loss_type, loss):
             if not torch.isfinite(loss_value) and loss_name != 'multipart':
                 print(f'############## {loss_name} Loss is Nan/Inf ! {loss_value} ##############')
@@ -68,31 +64,28 @@ def train(args, dataloader, model, criterion, optimizer):
         loss_str += f"{loss_name}: {losses[loss_name]:.4f}  "
     return loss_str
 
-
 def parse_args(make_dirs=True):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--exp_name", type=str, required=True, help="Name to log training")
+    parser.add_argument("--exp", type=str, required=True, help="Name to log training")
     parser.add_argument("--resume", type=str, nargs='?', const=True ,help="Name to resume path")
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
+    parser.add_argument("--img_size", type=int, default=416, help="Model input size")
+    parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
     parser.add_argument("--backbone", type=str, default="resnet18", help="Model architecture")
-    parser.add_argument("--img_size", type=int, default=448, help="Model input size")
-    parser.add_argument("--bs", type=int, default=64, help="Batch size")
-    parser.add_argument("--nbs", type=int, default=64, help="Nominal batch size")
     parser.add_argument("--num_epochs", type=int, default=150, help="Number of training epochs")
     parser.add_argument('--lr_decay', nargs='+', default=[90, 120], type=int, help='Epoch to learning rate decay')
     parser.add_argument("--warmup", type=int, default=1, help="Epochs for warming up training")
-    parser.add_argument("--init_lr", type=float, default=0.0001, help="Learning rate for inital training")
     parser.add_argument("--base_lr", type=float, default=0.001, help="Base learning rate")
     parser.add_argument("--momentum", type=float, default=0.9, help="Momentum")
     parser.add_argument("--weight_decay", type=float, default=0.0005, help="Weight decay")
-    parser.add_argument("--conf_thres", type=float, default=0.01, help="Threshold to filter confidence score")
+    parser.add_argument("--conf_thres", type=float, default=0.001, help="Threshold to filter confidence score")
     parser.add_argument("--nms_thres", type=float, default=0.6, help="Threshold to filter Box IoU of NMS process")
     parser.add_argument("--rank", type=int, default=0, help="Process id for computation")
     parser.add_argument("--img_interval", type=int, default=10, help="Interval to log train/val image")
     parser.add_argument("--workers", type=int, default=8, help="Number of workers used in dataloader")
     args = parser.parse_args()
     args.data = ROOT / "data" / args.data
-    args.exp_path = ROOT / 'experiment' / args.exp_name
+    args.exp_path = ROOT / 'experiment' / args.exp
     args.weight_dir = args.exp_path / 'weight'
     args.img_log_dir = args.exp_path / 'train_image'
     args.load_path = args.weight_dir / 'last.pt' if args.resume else None
@@ -107,36 +100,36 @@ def main():
     global epoch, logger
     
     args = parse_args(make_dirs=True)
-    logger = build_basic_logger(args.exp_path / 'train.log', set_level=1)
+    logger = build_basic_logger(args.exp_path / "train.log", set_level=1)
 
-    train_dataset = Dataset(yaml_path=args.data, phase='train')
+    train_dataset = Dataset(yaml_path=args.data, phase="train")
     train_transformer = AugmentTransform(input_size=args.img_size)
     train_dataset.load_transformer(transformer=train_transformer)
-    train_loader = DataLoader(dataset=train_dataset, collate_fn=Dataset.collate_fn, batch_size=args.bs, shuffle=True, pin_memory=True, num_workers=args.workers)
-    val_dataset = Dataset(yaml_path=args.data, phase='val')
+    train_loader = DataLoader(dataset=train_dataset, collate_fn=Dataset.collate_fn, batch_size=args.batch_size, 
+                              shuffle=True, pin_memory=True, num_workers=args.workers)
+    val_dataset = Dataset(yaml_path=args.data, phase="val")
     val_transformer = BasicTransform(input_size=args.img_size)
     val_dataset.load_transformer(transformer=val_transformer)
-    val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=args.bs, shuffle=False, pin_memory=True, num_workers=args.workers)
+    val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=args.batch_size, 
+                            shuffle=False, pin_memory=True, num_workers=args.workers)
     
     args.class_list = train_dataset.class_list
     args.color_list = generate_random_color(len(args.class_list))
     args.nw = max(round(args.warmup * len(train_loader)), 100)
-    args.accumulate = max(round(args.nbs / args.bs), 1)
-    args.last_opt_step = -1
     args.mAP_file_path = val_dataset.mAP_file_path
 
     model = YoloModel(input_size=args.img_size, backbone=args.backbone, num_classes=len(args.class_list))
     macs, params = profile(deepcopy(model), inputs=(torch.randn(1, 3, args.img_size, args.img_size),), verbose=False)
     model = model.cuda(args.rank)
     criterion = YoloLoss(grid_size=model.grid_size)
-    optimizer = optim.SGD(model.parameters(), lr=args.base_lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
+    optimizer = optim.SGD(model.parameters(), lr=args.base_lr, momentum=args.momentum, weight_decay=args.weight_decay)
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_decay, gamma=0.1)
     evaluator = Evaluator(annotation_file=args.mAP_file_path)
 
     if args.resume:
         assert args.load_path.is_file(), "Not exist trained weights in the directory path !"
         
-        ckpt = torch.load(args.load_path, map_location='cpu')
+        ckpt = torch.load(args.load_path, map_location="cpu")
         start_epoch = ckpt["running_epoch"]
         model.load_state_dict(ckpt["model_state"], strict=True)
         optimizer.load_state_dict(ckpt["optimizer_state"])
@@ -163,9 +156,9 @@ def main():
                     "optimizer_state": optimizer.state_dict(),
                     "scheduler_state": scheduler.state_dict()}
 
-        if epoch >= 10:
+        if epoch % 10 == 0:
             val_loader = tqdm(val_loader, desc=f"[VAL:{epoch:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
-            mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator, epoch=epoch)
+            mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator, epoch=epoch, save_result=True)
             ap50 = mAP_dict["all"]["mAP_50"]
 
             if ap50 > best_score:
@@ -173,7 +166,6 @@ def main():
                 result_analyis(args=args, mAP_dict=mAP_dict["all"])
                 best_epoch, best_score, best_mAP_str = epoch, ap50, eval_text
                 torch.save(save_opt, args.weight_dir / "best.pt")
-    
         torch.save(save_opt, args.weight_dir / "last.pt")
         scheduler.step()
 

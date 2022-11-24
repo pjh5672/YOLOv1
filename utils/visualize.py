@@ -58,7 +58,7 @@ def visualize_target(image, label, class_list, color_list):
     label_xcycwh[:, 1:5] = transform_xcycwh_to_x1y1x2y2(label_xcycwh[:, 1:5])
     label_xcycwh[:, 1:5] = scale_to_original(label_xcycwh[:, 1:5], scale_w=img_w, scale_h=img_h)
     image = visualize(image, label_xcycwh, class_list, color_list, show_class=True, show_score=False)
-    return image[...,::-1]
+    return image
 
 
 def visualize_prediction(image, prediction, class_list, color_list):
@@ -66,7 +66,7 @@ def visualize_prediction(image, prediction, class_list, color_list):
     if len(prediction) > 0:
         prediction[:, 1:5] *= input_size
         image = visualize(image, prediction, class_list, color_list, show_class=True, show_score=True)
-    return image[...,::-1]
+    return image
 
 
 def show_values(axs, orient='h', space=0.005, mode='ap'):
@@ -91,7 +91,7 @@ def show_values(axs, orient='h', space=0.005, mode='ap'):
                 ax.text(_x, _y, value, ha='left')
 
     if isinstance(axs, np.ndarray):
-        for idx, ax in np.ndenumerate(axs):
+        for _, ax in np.ndenumerate(axs):
             _single(ax)
     else:
         _single(axs)
