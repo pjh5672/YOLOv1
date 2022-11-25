@@ -56,7 +56,7 @@ class YoloLoss():
         cls_loss = cls_loss.sum() / self.batch_size
 
         multipart_loss = obj_loss + self.lambda_noobj * noobj_loss + self.lambda_coord * box_loss + cls_loss
-        return multipart_loss, obj_loss, noobj_loss, box_loss, cls_loss
+        return [multipart_loss, obj_loss, noobj_loss, box_loss, cls_loss]
 
 
     def build_target(self, label):

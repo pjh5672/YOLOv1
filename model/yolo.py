@@ -1,17 +1,17 @@
 import sys
 from pathlib import Path
 
-FILE = Path(__file__).resolve()
-ROOT = FILE.parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))
-
 import torch
 from torch import nn
 
 from backbone import build_backbone
 from neck import ConvBlock
 from head import YoloHead
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
+
 from utils import set_grid
 
 

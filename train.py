@@ -40,16 +40,20 @@ def train(args, dataloader, model, criterion, optimizer):
     optimizer.zero_grad()
 
     for i, minibatch in enumerate(dataloader):
-        ni = i + len(dataloader) * (epoch - 1) 
+        ni = i + len(dataloader) * (epoch - 1)
         if ni <= args.nw:
+            args.grad_accumulate = max(1, np.interp(ni, [0, args.nw], [1, args.acc_batch_size / args.batch_size]).round())
             set_lr(optimizer, args.base_lr * pow(ni / (args.nw), 4))
 
         images, labels = minibatch[1], minibatch[2]
         predictions = model(images.cuda(args.rank, non_blocking=True))
         loss = criterion(predictions=predictions, labels=labels)
-        loss[0].backward()
-        optimizer.step()
-        optimizer.zero_grad()
+        (loss[0]/args.grad_accumulate).backward()
+        
+        if ni - args.last_opt_step >= args.grad_accumulate:
+            optimizer.step()
+            optimizer.zero_grad()
+            args.last_opt_step = ni
         
         for loss_name, loss_value in zip(loss_type, loss):
             if not torch.isfinite(loss_value) and loss_name != 'multipart':
@@ -71,6 +75,7 @@ def parse_args(make_dirs=True):
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
     parser.add_argument("--img_size", type=int, default=416, help="Model input size")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
+    parser.add_argument("--acc_batch_size", type=int, default=64, help="Batch size for gradient accumulation")
     parser.add_argument("--backbone", type=str, default="resnet18", help="Model architecture")
     parser.add_argument("--num_epochs", type=int, default=150, help="Number of training epochs")
     parser.add_argument('--lr_decay', nargs='+', default=[90, 120], type=int, help='Epoch to learning rate decay')
@@ -117,6 +122,8 @@ def main():
     args.color_list = generate_random_color(len(args.class_list))
     args.nw = max(round(args.warmup * len(train_loader)), 100)
     args.mAP_file_path = val_dataset.mAP_file_path
+    args.grad_accumulate = max(round(args.acc_batch_size / args.batch_size), 1)
+    args.last_opt_step = -1
 
     model = YoloModel(input_size=args.img_size, backbone=args.backbone, num_classes=len(args.class_list))
     macs, params = profile(deepcopy(model), inputs=(torch.randn(1, 3, args.img_size, args.img_size),), verbose=False)
