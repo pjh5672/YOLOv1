@@ -29,9 +29,9 @@ This is a repository for PyTorch implementation of YOLOv1 following the original
 
  - **Pretrained Model Download**
 
-	- [YOLOv1 ResNet18 (AP68.3)](https://drive.google.com/file/d/1X0lS-SvHYSRm1lmVR_n3FkNfgL6YFLoA/view?usp=share_link)
-	- [YOLOv1 ResNet34 (AP71.6)](https://drive.google.com/file/d/1tBgmyWJ51UquyO15pPhb8iZXprKDi_iY/view?usp=share_link)
-	- [YOLOv1 ResNet50 (AP73.0)](https://drive.google.com/file/d/1AsTkfjVqpgCv1LKD5hak2dh-tQk2pmiq/view?usp=share_link)
+	- [YOLOv1 ResNet18 (AP@0.50 - 68.3)](https://drive.google.com/file/d/1X0lS-SvHYSRm1lmVR_n3FkNfgL6YFLoA/view?usp=share_link)
+	- [YOLOv1 ResNet34 (AP@0.50 - 71.6)](https://drive.google.com/file/d/1tBgmyWJ51UquyO15pPhb8iZXprKDi_iY/view?usp=share_link)
+	- [YOLOv1 ResNet50 (AP@0.50 - 73.0)](https://drive.google.com/file/d/1AsTkfjVqpgCv1LKD5hak2dh-tQk2pmiq/view?usp=share_link)
 
 
 <div align="center">
