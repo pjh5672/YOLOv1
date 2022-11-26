@@ -27,11 +27,11 @@ This is a repository for PyTorch implementation of YOLOv1 following the original
 | YOLOv1 ResNet50<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 43.0 | 73.0 | 35.07 | 32.41 |
 
 
- - **WEIGHT DOWNLOAD**
+ - **Pretrained Model Download**
 
-	- [YOLOv1 ResNet18 weight (AP68.3)](https://drive.google.com/file/d/1X0lS-SvHYSRm1lmVR_n3FkNfgL6YFLoA/view?usp=share_link)
-	- [YOLOv1 ResNet34 weight (AP71.6)](https://drive.google.com/file/d/1tBgmyWJ51UquyO15pPhb8iZXprKDi_iY/view?usp=share_link)
-	- [YOLOv1 ResNet50 weight (AP73.0)](https://drive.google.com/file/d/1AsTkfjVqpgCv1LKD5hak2dh-tQk2pmiq/view?usp=share_link)
+	- [YOLOv1 ResNet18 (AP68.3)](https://drive.google.com/file/d/1X0lS-SvHYSRm1lmVR_n3FkNfgL6YFLoA/view?usp=share_link)
+	- [YOLOv1 ResNet34 (AP71.6)](https://drive.google.com/file/d/1tBgmyWJ51UquyO15pPhb8iZXprKDi_iY/view?usp=share_link)
+	- [YOLOv1 ResNet50 (AP73.0)](https://drive.google.com/file/d/1AsTkfjVqpgCv1LKD5hak2dh-tQk2pmiq/view?usp=share_link)
 
 
 <div align="center">
