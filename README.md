@@ -23,6 +23,8 @@ This is a repository for PyTorch implementation of YOLOv1 following the original
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | 
 | YOLOv1<br><sup>(<u>Paper:page_with_curl:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | *not reported* | 63.4 | *not reported* | 40.16 |
 | YOLOv1 VGG16<br><sup>(<u>Paper:page_with_curl:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | *not reported* | 66.4 | *not reported* | *not reported* |
+| YOLOv1 VGG16<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 34.0 | 65.0 | 25.49 | 109.50 |
+| YOLOv1 VGG16-BN<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 35.7 | 67.6 | 25.49 | 109.50 |
 | YOLOv1 ResNet18<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 40.3 | 68.3 | 21.95 | 18.81 |
 | YOLOv1 ResNet34<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 45.2 | 71.6 | 32.06 | 29.01 |
 | YOLOv1 ResNet50<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 43.0 | 73.0 | 35.07 | 32.41 |
@@ -30,6 +32,8 @@ This is a repository for PyTorch implementation of YOLOv1 following the original
 
  - **Pretrained Model Download**
 
+	- [YOLOv1 VGG16 (AP@0.50 - 65.0)](https://drive.google.com/file/d/1BKrPgu_dGq3orYhw6M3w709klm1X8E6S/view?usp=share_link)
+	- [YOLOv1 VGG16-BN (AP@0.50 - 67.6)](https://drive.google.com/file/d/1OAy-emEVpg_fFYmpk44rz0qZWOv9f_WZ/view?usp=share_link)
 	- [YOLOv1 ResNet18 (AP@0.50 - 68.3)](https://drive.google.com/file/d/1X0lS-SvHYSRm1lmVR_n3FkNfgL6YFLoA/view?usp=share_link)
 	- [YOLOv1 ResNet34 (AP@0.50 - 71.6)](https://drive.google.com/file/d/1tBgmyWJ51UquyO15pPhb8iZXprKDi_iY/view?usp=share_link)
 	- [YOLOv1 ResNet50 (AP@0.50 - 73.0)](https://drive.google.com/file/d/1AsTkfjVqpgCv1LKD5hak2dh-tQk2pmiq/view?usp=share_link)
@@ -71,41 +75,42 @@ python val.py --exp_name my_test --data voc.yaml --ckpt_name best.pt
 
 
 ```log
-2022-11-09 17:41:29 | YOLOv1 Architecture Info - Params(M): 21.95, FLOPS(B): 18.81
-2022-11-09 17:43:31 | [Train-Epoch:001] multipart: 19.7455  obj: 0.5801  noobj: 16.4438  box: 1.0034  cls: 5.9263  
-2022-11-09 17:45:32 | [Train-Epoch:002] multipart: 5.8577  obj: 0.5340  noobj: 0.6452  box: 0.5048  cls: 2.4772  
-2022-11-09 17:47:31 | [Train-Epoch:003] multipart: 4.5413  obj: 0.5853  noobj: 0.0855  box: 0.4324  cls: 1.7515  
-2022-11-09 17:49:31 | [Train-Epoch:004] multipart: 4.0832  obj: 0.6127  noobj: 0.1014  box: 0.3966  cls: 1.4368  
-2022-11-09 17:51:30 | [Train-Epoch:005] multipart: 3.8923  obj: 0.6203  noobj: 0.1221  box: 0.3785  cls: 1.3186  
-2022-11-09 17:53:31 | [Train-Epoch:006] multipart: 3.7505  obj: 0.6301  noobj: 0.1374  box: 0.3659  cls: 1.2219  
-2022-11-09 17:55:30 | [Train-Epoch:007] multipart: 3.6210  obj: 0.6238  noobj: 0.1554  box: 0.3523  cls: 1.1581  
-2022-11-09 17:57:29 | [Train-Epoch:008] multipart: 3.5554  obj: 0.6247  noobj: 0.1666  box: 0.3469  cls: 1.1130  
-2022-11-09 17:59:29 | [Train-Epoch:009] multipart: 3.4773  obj: 0.6212  noobj: 0.1815  box: 0.3383  cls: 1.0738  
-2022-11-09 18:01:29 | [Train-Epoch:010] multipart: 3.3752  obj: 0.6123  noobj: 0.1950  box: 0.3311  cls: 1.0098  
-2022-11-09 18:01:53 | 
-	 - Average Precision (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.121
-	 - Average Precision (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.336
-	 - Average Precision (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.054
-	 - Average Precision (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.003
-	 - Average Precision (AP) @[ IoU=0.50      | area= small | maxDets=100 ] = 0.011
-	 - Average Precision (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.039
-	 - Average Precision (AP) @[ IoU=0.50      | area=medium | maxDets=100 ] = 0.131
-	 - Average Precision (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.154
-	 - Average Precision (AP) @[ IoU=0.50      | area= large | maxDets=100 ] = 0.405
+2022-11-25 18:37:35 | YOLOv1 Architecture Info - Params(M): 35.07, FLOPS(B): 32.41
+2022-11-25 18:41:48 | [Train-Epoch:001] multipart: 13.6807  obj: 0.3439  noobj: 12.8928  box: 0.5445  cls: 4.1677  
+2022-11-25 18:45:52 | [Train-Epoch:002] multipart: 3.8190  obj: 0.4812  noobj: 0.1155  box: 0.3377  cls: 1.5916  
+2022-11-25 18:49:58 | [Train-Epoch:003] multipart: 3.3824  obj: 0.4848  noobj: 0.1571  box: 0.2936  cls: 1.3509  
+2022-11-25 18:54:05 | [Train-Epoch:004] multipart: 3.1404  obj: 0.4771  noobj: 0.1755  box: 0.2745  cls: 1.2028  
+2022-11-25 18:58:11 | [Train-Epoch:005] multipart: 3.0149  obj: 0.4663  noobj: 0.1998  box: 0.2640  cls: 1.1287  
+2022-11-25 19:02:17 | [Train-Epoch:006] multipart: 2.8718  obj: 0.4488  noobj: 0.2169  box: 0.2517  cls: 1.0560  
+2022-11-25 19:06:23 | [Train-Epoch:007] multipart: 2.7623  obj: 0.4314  noobj: 0.2359  box: 0.2440  cls: 0.9928  
+2022-11-25 19:10:29 | [Train-Epoch:008] multipart: 2.6833  obj: 0.4180  noobj: 0.2470  box: 0.2365  cls: 0.9595  
+2022-11-25 19:14:35 | [Train-Epoch:009] multipart: 2.6262  obj: 0.4060  noobj: 0.2590  box: 0.2335  cls: 0.9235  
+2022-11-25 19:18:43 | [Train-Epoch:010] multipart: 2.5375  obj: 0.3966  noobj: 0.2653  box: 0.2251  cls: 0.8827  
+2022-11-25 19:19:40 | 
+	 - Average Precision (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.240
+	 - Average Precision (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.534
+	 - Average Precision (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.172
+	 - Average Precision (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.007
+	 - Average Precision (AP) @[ IoU=0.50      | area= small | maxDets=100 ] = 0.031
+	 - Average Precision (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.087
+	 - Average Precision (AP) @[ IoU=0.50      | area=medium | maxDets=100 ] = 0.249
+	 - Average Precision (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.298
+	 - Average Precision (AP) @[ IoU=0.50      | area= large | maxDets=100 ] = 0.626
 
                                                 ...
 
-2022-11-09 22:59:17 | [Train-Epoch:135] multipart: 1.6719  obj: 0.3912  noobj: 0.3355  box: 0.1720  cls: 0.2530  
-2022-11-09 22:59:40 | 
-	 - Average Precision (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.329
-	 - Average Precision (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.605
-	 - Average Precision (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.292
-	 - Average Precision (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.009
-	 - Average Precision (AP) @[ IoU=0.50      | area= small | maxDets=100 ] = 0.036
-	 - Average Precision (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.113
-	 - Average Precision (AP) @[ IoU=0.50      | area=medium | maxDets=100 ] = 0.293
-	 - Average Precision (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.399
-	 - Average Precision (AP) @[ IoU=0.50      | area= large | maxDets=100 ] = 0.688
+2022-11-26 05:07:31 | [Train-Epoch:149] multipart: 1.2090  obj: 0.2616  noobj: 0.2845  box: 0.1177  cls: 0.2167  
+2022-11-26 05:07:32 | [Best mAP at 140]
+
+	 - Average Precision (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.438
+	 - Average Precision (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.730
+	 - Average Precision (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.439
+	 - Average Precision (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.083
+	 - Average Precision (AP) @[ IoU=0.50      | area= small | maxDets=100 ] = 0.191
+	 - Average Precision (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.199
+	 - Average Precision (AP) @[ IoU=0.50      | area=medium | maxDets=100 ] = 0.445
+	 - Average Precision (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.510
+	 - Average Precision (AP) @[ IoU=0.50      | area= large | maxDets=100 ] = 0.788
 ```
 
 
