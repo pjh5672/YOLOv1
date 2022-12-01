@@ -34,4 +34,3 @@ if __name__ == "__main__":
     print(out.shape)
     out = head(out)
     print(out.shape)
-

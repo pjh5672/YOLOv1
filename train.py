@@ -6,8 +6,8 @@ import platform
 import argparse
 from pathlib import Path
 from copy import deepcopy
-from collections import defaultdict
 from datetime import datetime
+from collections import defaultdict
 
 import torch
 import numpy as np
@@ -65,7 +65,8 @@ def train(args, dataloader, model, criterion, optimizer, scaler):
         with amp.autocast(enabled=not args.no_amp):
             predictions = model(images.cuda(args.rank, non_blocking=True))
             loss = criterion(predictions=predictions, labels=labels)
-        scaler.scale(loss[0]/args.grad_accumulate).backward()
+
+        scaler.scale((loss[0] / args.grad_accumulate) * args.world_size).backward()
         
         if ni - args.last_opt_step >= args.grad_accumulate:
             scaler.step(optimizer)
@@ -138,25 +139,28 @@ def main_work(rank, world_size, args, logger):
     ################################### Init Instance ###################################
     global epoch
 
+    args.rank = rank
+    args.last_opt_step = -1
+    args.batch_size = args.batch_size // world_size
+    args.grad_accumulate = max(round(args.acc_batch_size / args.batch_size), 1)
+    args.workers = min([os.cpu_count() // max(world_size, 1), args.batch_size if args.batch_size > 1 else 0, args.workers])
+    
     train_dataset = Dataset(yaml_path=args.data, phase="train")
     train_transformer = AugmentTransform(input_size=args.img_size)
     train_dataset.load_transformer(transformer=train_transformer)
-    train_sampler = distributed.DistributedSampler(train_dataset, num_replicas=world_size, rank=rank, shuffle=True)
+    train_sampler = distributed.DistributedSampler(train_dataset, num_replicas=world_size, rank=args.rank, shuffle=True)
     train_loader = DataLoader(dataset=train_dataset, collate_fn=Dataset.collate_fn, batch_size=args.batch_size, 
                               shuffle=False, pin_memory=True, num_workers=args.workers, sampler=train_sampler)
     val_dataset = Dataset(yaml_path=args.data, phase="val")
     val_transformer = BasicTransform(input_size=args.img_size)
     val_dataset.load_transformer(transformer=val_transformer)
-    val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=args.batch_size//args.world_size, 
+    val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=args.batch_size, 
                             shuffle=False, pin_memory=True, num_workers=args.workers)
 
     args.class_list = train_dataset.class_list
     args.color_list = generate_random_color(len(args.class_list))
     args.nw = max(round(args.warmup * len(train_loader)), 100)
     args.mAP_file_path = val_dataset.mAP_file_path
-    args.grad_accumulate = max(round(args.acc_batch_size / args.batch_size), 1)
-    args.last_opt_step = -1
-    args.rank = rank
     
     model = YoloModel(input_size=args.img_size, backbone=args.backbone, num_classes=len(args.class_list))
     macs, params = profile(deepcopy(model), inputs=(torch.randn(1, 3, args.img_size, args.img_size),), verbose=False)
@@ -169,10 +173,8 @@ def main_work(rank, world_size, args, logger):
     model = model.cuda(args.rank)
     if OS_SYSTEM == 'Linux':
         model = DDP(model, device_ids=[args.rank])
-
-    #################################### Load Model #####################################
-    if OS_SYSTEM == 'Linux':
         dist.barrier()
+    #################################### Load Model #####################################
 
     if args.resume:
         assert args.load_path.is_file(), "Not exist trained weights in the directory path !"
@@ -195,6 +197,7 @@ def main_work(rank, world_size, args, logger):
         if args.rank == 0:
             logging.warning(f"[Arguments]\n{pprint.pformat(vars(args))}\n")
             logging.warning(f"Architecture Info - Params(M): {params/1e+6:.2f}, FLOPS(B): {2*macs/1E+9:.2f}")
+
     #################################### Train Model ####################################
     if args.rank == 0:
         progress_bar = trange(start_epoch, args.num_epochs, total=args.num_epochs, initial=start_epoch, ncols=115)
@@ -223,6 +226,7 @@ def main_work(rank, world_size, args, logger):
                 val_loader = tqdm(val_loader, desc=f"[VAL:{epoch:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
                 mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator, epoch=epoch)
                 ap50 = mAP_dict["all"]["mAP_50"]
+
                 if ap50 > best_score:
                     logging.warning(eval_text)
                     result_analyis(args=args, mAP_dict=mAP_dict["all"])
