@@ -227,10 +227,10 @@ def main_work(rank, world_size, args, logger):
             if epoch % 10 == 0:
                 val_loader = tqdm(val_loader, desc=f"[VAL:{epoch:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
                 mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator, epoch=epoch)
-                logging.warning(eval_text)
-
                 ap50 = mAP_dict["all"]["mAP_50"]
+
                 if ap50 > best_score:
+                    logging.warning(eval_text)
                     result_analyis(args=args, mAP_dict=mAP_dict["all"])
                     best_epoch, best_score, best_mAP_str = epoch, ap50, eval_text
                     torch.save(save_opt, args.weight_dir / "best.pt")
