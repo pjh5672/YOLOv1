@@ -49,15 +49,20 @@ This is a repository for PyTorch implementation of YOLOv1 following the original
 ## [Usage]
 
 #### Model Training 
- - You can train your own YOLOv1 model using various backbone architectures (ResNet18, ResNet34, ResNet50, ResNet101, VGG16, and VGG16-BN) 
+ - You can train your own YOLOv1 model using various backbone architectures of ResNet18, ResNet34, ResNet50, ResNet101, VGG16, and VGG16-BN   
 
 ```python
 python train.py --exp my_test --data voc.yaml --backbone resnet18
+											  --backbone resnet34
+											  --backbone resnet50
+											  --backbone resnet101
+											  --backbone vgg16
+											  --backbone vgg16_bn
 ```
 
 
 #### Detection Evaluation
- - You can compute detection metric via mean Average Precision(mAP) with IoU of 0.5, 0.75, 0.5:0.95. I follow the evaluation code with the reference on https://github.com/rafaelpadilla/Object-Detection-Metrics
+ - It computes detection metric via mean Average Precision(mAP) with IoU of 0.5, 0.75, 0.5:0.95. I follow the evaluation code with the reference on https://github.com/rafaelpadilla/Object-Detection-Metrics
 
 ```python
 python val.py --exp my_test --data voc.yaml --ckpt_name best.pt
