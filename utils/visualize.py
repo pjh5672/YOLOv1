@@ -49,7 +49,7 @@ def visualize(image, label, class_list, color_list, show_class=False, show_score
     canvas = image.copy()
     for item in label:
         canvas = visualize_box(canvas, item, class_list, color_list, show_class=show_class, show_score=show_score)
-    return canvas
+    return canvas[..., ::-1]
 
 
 def visualize_target(image, label, class_list, color_list):

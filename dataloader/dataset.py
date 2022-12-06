@@ -62,6 +62,7 @@ class Dataset:
     def get_image(self, index):
         filename = self.image_paths[index].split(os.sep)[-1]
         image = cv2.imread(self.image_paths[index])
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return filename, image
 
 

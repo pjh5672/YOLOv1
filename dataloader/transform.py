@@ -3,13 +3,14 @@ import torch
 import numpy as np
 
 
-MEAN = 0.406, 0.456, 0.485 # BGR
-STD = 0.225, 0.224, 0.229 # BGR
+MEAN = 0.485, 0.456, 0.406 # RGB
+STD = 0.229, 0.224, 0.225 # RGB
 
 
 def to_tensor(image):
     image = np.ascontiguousarray(image.transpose(2, 0, 1))
     return torch.from_numpy(image).float()
+
 
 def to_image(tensor, mean=MEAN, std=STD):
     denorm_tensor = tensor.clone()
@@ -19,6 +20,7 @@ def to_image(tensor, mean=MEAN, std=STD):
     denorm_tensor *= 255
     image = denorm_tensor.permute(1,2,0).numpy().astype(np.uint8)
     return image
+
 
 def denormalize(image, mean=MEAN, std=STD):
     image *= std
