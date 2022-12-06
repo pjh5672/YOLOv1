@@ -43,8 +43,8 @@ def setup(rank, world_size):
         dist.init_process_group('nccl', rank=rank, world_size=world_size)
 
 
-def cleanup():
-    if OS_SYSTEM == 'Linux':
+def cleanup(world_size):
+    if OS_SYSTEM == 'Linux' and world_size > 1:
         dist.destroy_process_group()
 
 
@@ -228,12 +228,13 @@ def main_work(rank, world_size, args, logger):
                 val_loader = tqdm(val_loader, desc=f"[VAL:{epoch:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
                 mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator, epoch=epoch)
                 ap50 = mAP_dict["all"]["mAP_50"]
+                logging.warning(eval_text)
 
                 if ap50 > best_score:
-                    logging.warning(eval_text)
                     result_analyis(args=args, mAP_dict=mAP_dict["all"])
                     best_epoch, best_score, best_mAP_str = epoch, ap50, eval_text
                     torch.save(save_opt, args.weight_dir / "best.pt")
+    
         scheduler.step()
 
     if mAP_dict and args.rank == 0:
@@ -248,8 +249,8 @@ if __name__ == "__main__":
         torch.multiprocessing.set_start_method('spawn', force=True)
         logger = setup_primary_logging(args.exp_path / 'train.log')
         mp.spawn(main_work, args=(args.world_size, args, logger), nprocs=args.world_size, join=True)
+        cleanup(world_size=args.world_size)
     else:
         logger = build_basic_logger(args.exp_path / "train.log")
         main_work(rank=0, world_size=1, args=args, logger=logger)
-
-    cleanup()
+    
