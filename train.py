@@ -216,6 +216,7 @@ def main_work(rank, world_size, args, logger):
         if args.rank == 0:
             logging.warning(train_loss_str) 
             save_opt = {"running_epoch": epoch,
+                        "backbone": args.backbone,
                         "depthwise": args.depthwise,
                         "class_list": args.class_list,
                         "model_state": deepcopy(model.module).state_dict() if hasattr(model, "module") else deepcopy(model).state_dict(),
