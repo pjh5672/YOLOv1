@@ -58,7 +58,7 @@ def train(args, dataloader, model, criterion, optimizer, scaler):
         ni = i + len(dataloader) * (epoch - 1)
         if ni <= args.nw:
             args.grad_accumulate = max(1, np.interp(ni, [0, args.nw], [1, args.acc_batch_size / args.batch_size]).round())
-            set_lr(optimizer, args.base_lr * pow(ni / (args.nw), 4))
+            set_lr(optimizer, args.base_lr * pow(ni / (args.nw), 2))
 
         images, labels = minibatch[1], minibatch[2]
         
