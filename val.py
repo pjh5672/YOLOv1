@@ -96,7 +96,6 @@ def parse_args(make_dirs=True):
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp", type=str, required=True, help="Name to log training")
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
-    parser.add_argument("--backbone", type=str, default="resnet18", help="Model architecture")
     parser.add_argument("--img_size", type=int, default=448, help="Model input size")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size")
     parser.add_argument("--num_epochs", type=int, default=1, help="Number of training epochs")
@@ -109,9 +108,9 @@ def parse_args(make_dirs=True):
     
     args = parser.parse_args()
     args.data = ROOT / "data" / args.data
-    args.exp_path = ROOT / 'experiment' / args.exp
-    args.ckpt_path = args.exp_path / 'weight' / args.ckpt_name
-    args.img_log_dir = args.exp_path / 'val_image'
+    args.exp_path = ROOT / "experiment" / args.exp
+    args.ckpt_path = args.exp_path / "weight" / args.ckpt_name
+    args.img_log_dir = args.exp_path / "val_image"
     
     if make_dirs:
         os.makedirs(args.img_log_dir, exist_ok=True)
@@ -126,8 +125,7 @@ def main():
     val_dataset = Dataset(yaml_path=args.data, phase="val")
     val_transformer = BasicTransform(input_size=args.img_size)
     val_dataset.load_transformer(transformer=val_transformer)
-    val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=args.batch_size, 
-                            shuffle=False, pin_memory=True, num_workers=args.workers)
+    val_loader = DataLoader(dataset=val_dataset, collate_fn=Dataset.collate_fn, batch_size=args.batch_size, shuffle=False, pin_memory=True, num_workers=args.workers)
 
     ckpt = torch.load(args.ckpt_path, map_location = {"cpu":"cuda:%d" %args.rank})
     args.class_list = ckpt["class_list"]
@@ -139,8 +137,8 @@ def main():
     model = model.cuda(args.rank)
     evaluator = Evaluator(annotation_file=args.mAP_file_path)
 
-    if (args.exp_path / 'predictions.txt').is_file():
-        cocoPred = np.loadtxt(args.exp_path / 'predictions.txt', delimiter = ',', skiprows=1)
+    if (args.exp_path / "predictions.txt").is_file():
+        cocoPred = np.loadtxt(args.exp_path / "predictions.txt", delimiter = ",", skiprows=1)
         mAP_dict, eval_text = evaluator(predictions=cocoPred)
     else:
         val_loader = tqdm(val_loader, desc=f"[VAL:{0:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
