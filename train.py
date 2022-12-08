@@ -14,7 +14,6 @@ import numpy as np
 from torch.cuda import amp
 from tqdm import tqdm, trange
 from thop import profile
-from torch import nn
 from torch import optim
 from torch.backends import cudnn
 from torch.utils.data import DataLoader, distributed
@@ -43,8 +42,8 @@ def setup(rank, world_size):
         dist.init_process_group('nccl', rank=rank, world_size=world_size)
 
 
-def cleanup(world_size):
-    if OS_SYSTEM == 'Linux' and world_size > 1:
+def cleanup():
+    if OS_SYSTEM == 'Linux':
         dist.destroy_process_group()
 
 
@@ -240,7 +239,9 @@ def main_work(rank, world_size, args, logger):
 
     if mAP_dict and args.rank == 0:
         logging.warning(f"[Best mAP at {best_epoch}]\n{best_mAP_str}")
-    
+        
+    cleanup()
+
 
 
 if __name__ == "__main__":
@@ -250,7 +251,6 @@ if __name__ == "__main__":
         torch.multiprocessing.set_start_method('spawn', force=True)
         logger = setup_primary_logging(args.exp_path / 'train.log')
         mp.spawn(main_work, args=(args.world_size, args, logger), nprocs=args.world_size, join=True)
-        cleanup(world_size=args.world_size)
     else:
         logger = build_basic_logger(args.exp_path / "train.log")
         main_work(rank=0, world_size=1, args=args, logger=logger)
