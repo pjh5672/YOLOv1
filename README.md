@@ -14,7 +14,7 @@
 
 ## [Description]
 
-This is a repository for PyTorch implementation of YOLOv1 following the original paper (https://arxiv.org/abs/1506.02640). 
+This is a repository for PyTorch implementation of YOLOv1 following the original paper (https://arxiv.org/abs/1506.02640). In addition, we provides model weights that trained on the VOC dataset, so you can quickly train YOLOv1 on your own dataset ! Just download the weight given below and move it into "./weights" directory.
 
 
  - **Performance Table**
@@ -30,13 +30,13 @@ This is a repository for PyTorch implementation of YOLOv1 following the original
 | YOLOv1 ResNet50<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 44.5 | 73.8 | 35.07 | 32.41 |
 
 
- - **Pretrained Model Download**
+ - **Pretrained weights Download**
 
-	- [YOLOv1 VGG16 (AP@0.50 - 65.0)](https://drive.google.com/file/d/1BKrPgu_dGq3orYhw6M3w709klm1X8E6S/view?usp=share_link)
-	- [YOLOv1 VGG16-BN (AP@0.50 - 67.6)](https://drive.google.com/file/d/1OAy-emEVpg_fFYmpk44rz0qZWOv9f_WZ/view?usp=share_link)
-	- [YOLOv1 ResNet18 (AP@0.50 - 68.3)](https://drive.google.com/file/d/1X0lS-SvHYSRm1lmVR_n3FkNfgL6YFLoA/view?usp=share_link)
-	- [YOLOv1 ResNet34 (AP@0.50 - 71.6)](https://drive.google.com/file/d/1tBgmyWJ51UquyO15pPhb8iZXprKDi_iY/view?usp=share_link)
-	- [YOLOv1 ResNet50 (AP@0.50 - 73.0)](https://drive.google.com/file/d/1AsTkfjVqpgCv1LKD5hak2dh-tQk2pmiq/view?usp=share_link)
+	- [YOLOv1 VGG16](https://drive.google.com/file/d/1u1Ib8x0_HAqBupHeUNgZSWszDnx4Vaeh/view?usp=share_link)
+	- [YOLOv1 VGG16-BN](https://drive.google.com/file/d/1bRPulX9gUztUGrfNxCMBkYfA0tbQz_6H/view?usp=share_link)
+	- [YOLOv1 ResNet18](https://drive.google.com/file/d/196eKsDxI69ck5sK1CeHJYHq6dsBR2Crj/view?usp=share_link)
+	- [YOLOv1 ResNet34](https://drive.google.com/file/d/1TvTmyIyQO2IFXD9viINm2RCdD74nShha/view?usp=share_link)
+	- [YOLOv1 ResNet50](https://drive.google.com/file/d/14jNr6XWg3fPd8_Wvlw1ArK1Wzd_8Vb09/view?usp=share_link)
 
 
 <div align="center">
