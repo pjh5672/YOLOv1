@@ -234,12 +234,10 @@ def main_work(rank, world_size, args, logger):
                     result_analyis(args=args, mAP_dict=mAP_dict["all"])
                     best_epoch, best_score, best_mAP_str = epoch, ap50, eval_text
                     torch.save(save_opt, args.weight_dir / "best.pt")
-    
         scheduler.step()
 
     if mAP_dict and args.rank == 0:
         logging.warning(f"[Best mAP at {best_epoch}]\n{best_mAP_str}")
-        
     cleanup()
 
 
