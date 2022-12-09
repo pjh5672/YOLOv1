@@ -50,14 +50,14 @@ In addition, we provides model weights that trained on the VOC dataset, so you c
 ## [Usage]
 
 #### Model Training 
- - You can train your own YOLOv1 model using various backbone architectures of ResNet18, ResNet34, ResNet50, ResNet101, VGG16, and VGG16-BN. In addition, you can change model with depth-wise separable convolution layers with adding "--depthwise".    
+ - You can train your own YOLOv1 model using various backbone architectures of ResNet18, ResNet34, ResNet50, ResNet101, VGG16, and VGG16-BN. In addition, you can change model with depth-wise separable convolution layers with adding "--depthwise".  If you wanna train YOLOv1 on your dataset from the scratch, add "--scratch" in training command like below. Since there is no available pretrained depthwise model weight, "--depthwise" command have to be used with "--scratch".  
 
 ```python
 python train.py --exp my_test 
 		--data voc.yaml 
 		--backbone {vgg16, vgg16_bn, resnet18, resnet34, resnet50, resnet101}
 		--depthwise (optional)
-
+		--scratch (optional)
 ```
 
 
