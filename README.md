@@ -49,7 +49,8 @@ This is a repository for PyTorch implementation of YOLOv1 following the original
 ## [Usage]
 
 #### Model Training 
- - You can train your own YOLOv1 model using various backbone architectures of ResNet18, ResNet34, ResNet50, ResNet101, VGG16, and VGG16-BN   
+ - You can train your own YOLOv1 model using various backbone architectures of ResNet18, ResNet34, ResNet50, ResNet101, VGG16, and VGG16-BN.  
+ - In addition, you can change model with depth-wise separable convolution layers with adding "--depthwise".    
 
 ```python
 python train.py --exp my_test --data voc.yaml --backbone resnet18
