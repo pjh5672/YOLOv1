@@ -80,6 +80,9 @@ def train(args, dataloader, model, criterion, optimizer, scaler):
             else:
                 losses[loss_name] += loss_value.item()
 
+    del images, predictions, labels
+    torch.cuda.empty_cache()
+    
     loss_str = f"[Train-Epoch:{epoch:03d}] "
     for loss_name in loss_type:
         losses[loss_name] /= len(dataloader)

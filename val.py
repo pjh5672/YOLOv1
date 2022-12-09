@@ -58,6 +58,9 @@ def validate(args, dataloader, model, evaluator, epoch=0, save_result=False):
                 box_x1y1wh = transform_x1y1x2y2_to_x1y1wh(boxes=box_x1y1x2y2)
                 img_id = np.array((imageToid[filename],) * len(cls_id))[:, np.newaxis]
                 cocoPred.append(np.concatenate((img_id, box_x1y1wh, conf, cls_id), axis=1))
+    
+    del images, predictions
+    torch.cuda.empty_cache()
 
     if (epoch % args.img_interval == 0) and args.img_log_dir:
         for k in range(len(check_images)):
