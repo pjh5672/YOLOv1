@@ -14,7 +14,8 @@
 
 ## [Description]
 
-This is a repository for PyTorch implementation of YOLOv1 following the original paper (https://arxiv.org/abs/1506.02640). In addition, we provides model weights that trained on the VOC dataset, so you can quickly train YOLOv1 on your own dataset ! Just download the weight given below and move it into "./weights" directory.
+This is a repository for PyTorch implementation of YOLOv1 following the original paper (https://arxiv.org/abs/1506.02640). 
+In addition, we provides model weights that trained on the VOC dataset, so you can quickly train YOLOv1 on your own dataset ! Just download the weight given below and move it into "./weights" directory. If you wanna train YOLOv1 on your dataset from the scratch, add "--scratch" in training command.
 
 
  - **Performance Table**
