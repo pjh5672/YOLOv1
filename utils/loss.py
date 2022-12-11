@@ -13,14 +13,14 @@ from utils import set_grid
 
 
 class YoloLoss():
-    def __init__(self, grid_size):
+    def __init__(self, grid_size, label_smoothing=0.0):
         self.lambda_noobj = 0.5
         self.lambda_coord = 5.0
         self.grid_size = grid_size
         self.num_attributes = 1 + 4 + 1
         self.obj_loss_func = nn.MSELoss(reduction='none')
         self.box_loss_func = nn.MSELoss(reduction='none')
-        self.cls_loss_func = nn.CrossEntropyLoss(reduction='none')
+        self.cls_loss_func = nn.CrossEntropyLoss(reduction='none', label_smoothing=label_smoothing)
         grid_x, grid_y = set_grid(grid_size=self.grid_size)
         self.grid_x = grid_x.contiguous().view((1, -1))
         self.grid_y = grid_y.contiguous().view((1, -1))

@@ -104,6 +104,7 @@ def parse_args(make_dirs=True):
     parser.add_argument("--base_lr", type=float, default=0.001, help="Base learning rate")
     parser.add_argument("--momentum", type=float, default=0.9, help="Momentum")
     parser.add_argument("--weight_decay", type=float, default=0.0005, help="Weight decay")
+    parser.add_argument("--label_smoothing", type=float, default=0.1, help="Label smoothing")
     parser.add_argument("--conf_thres", type=float, default=0.001, help="Threshold to filter confidence score")
     parser.add_argument("--nms_thres", type=float, default=0.6, help="Threshold to filter Box IoU of NMS process")
     parser.add_argument("--img_interval", type=int, default=10, help="Interval to log train/val image")
@@ -168,7 +169,7 @@ def main_work(rank, world_size, args, logger):
     
     model = YoloModel(input_size=args.img_size, backbone=args.backbone, num_classes=len(args.class_list), pretrained=not args.scratch, depthwise=args.depthwise)
     macs, params = profile(deepcopy(model), inputs=(torch.randn(1, 3, args.img_size, args.img_size),), verbose=False)
-    criterion = YoloLoss(grid_size=model.grid_size)
+    criterion = YoloLoss(grid_size=model.grid_size, label_smoothing=args.label_smoothing)
     optimizer = optim.SGD(model.parameters(), lr=args.base_lr, momentum=args.momentum, weight_decay=args.weight_decay)
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_decay, gamma=0.1)
     evaluator = Evaluator(annotation_file=args.mAP_file_path)
