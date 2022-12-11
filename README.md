@@ -24,20 +24,21 @@ In addition, we provide model weights that trained on the VOC dataset, so you ca
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | 
 | YOLOv1<br><sup>(<u>Paper:page_with_curl:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | *not reported* | 63.4 | *not reported* | 40.16 |
 | YOLOv1 VGG16<br><sup>(<u>Paper:page_with_curl:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | *not reported* | 66.4 | *not reported* | *not reported* |
-| YOLOv1 VGG16<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 33.4 | 65.3 | 25.49 | 109.50 |
-| YOLOv1 VGG16-BN<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 35.8 | 67.6 | 25.49 | 109.50 |
-| YOLOv1 ResNet18<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 39.1 | 68.0 | 21.95 | 18.81 |
+| YOLOv1 ResNet18<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 39.8 | 68.6 | 21.95 | 18.81 |
 | YOLOv1 ResNet34<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 45.2 | 71.6 | 32.06 | 29.01 |
 | YOLOv1 ResNet50<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 44.5 | 73.8 | 35.07 | 32.41 |
+| YOLOv1 VGG16<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 33.4 | 65.3 | 25.49 | 109.50 |
+| YOLOv1 VGG16-BN<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 35.8 | 67.6 | 25.49 | 109.50 |
 
 
  - **Pretrained weights Download**
 
-	- [YOLOv1 VGG16](https://drive.google.com/file/d/1u1Ib8x0_HAqBupHeUNgZSWszDnx4Vaeh/view?usp=share_link)
-	- [YOLOv1 VGG16-BN](https://drive.google.com/file/d/1bRPulX9gUztUGrfNxCMBkYfA0tbQz_6H/view?usp=share_link)
 	- [YOLOv1 ResNet18](https://drive.google.com/file/d/196eKsDxI69ck5sK1CeHJYHq6dsBR2Crj/view?usp=share_link)
 	- [YOLOv1 ResNet34](https://drive.google.com/file/d/1TvTmyIyQO2IFXD9viINm2RCdD74nShha/view?usp=share_link)
 	- [YOLOv1 ResNet50](https://drive.google.com/file/d/14jNr6XWg3fPd8_Wvlw1ArK1Wzd_8Vb09/view?usp=share_link)
+	- [YOLOv1 VGG16](https://drive.google.com/file/d/1u1Ib8x0_HAqBupHeUNgZSWszDnx4Vaeh/view?usp=share_link)
+	- [YOLOv1 VGG16-BN](https://drive.google.com/file/d/1bRPulX9gUztUGrfNxCMBkYfA0tbQz_6H/view?usp=share_link)
+
 
 
 <div align="center">
@@ -65,9 +66,7 @@ python train.py --exp my_test
  - It computes detection metric via mean Average Precision(mAP) with IoU of 0.5, 0.75, 0.5:0.95. I follow the evaluation code with the reference on https://github.com/rafaelpadilla/Object-Detection-Metrics
 
 ```python
-python val.py --exp my_test 
-		--data voc.yaml 
-		--ckpt_name best.pt
+python val.py --exp my_test --data voc.yaml --ckpt_name best.pt
 ```
 
 

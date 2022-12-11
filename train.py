@@ -94,7 +94,7 @@ def parse_args(make_dirs=True):
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp", type=str, required=True, help="Name to log training")
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
-    parser.add_argument("--img_size", type=int, default=416, help="Model input size")
+    parser.add_argument("--img_size", type=int, default=448, help="Model input size")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
     parser.add_argument("--acc_batch_size", type=int, default=64, help="Batch size for gradient accumulation")
     parser.add_argument("--backbone", type=str, default="resnet18", help="Model architecture")
@@ -113,9 +113,9 @@ def parse_args(make_dirs=True):
     parser.add_argument("--rank", type=int, default=0, help="Process id for computation")
     parser.add_argument("--no_amp", action="store_true", help="Use of FP32 training (default: AMP training)")
     parser.add_argument("--depthwise", action="store_true", help="Use of Depth-separable conv operation")
-    parser.add_argument("--resume", type=str, nargs='?', const=True ,help="Name to resume path")
     parser.add_argument("--scratch", action="store_true", help="Scratch training without pretrained weights")
-
+    parser.add_argument("--resume", action="store_true", help="Name to resume path")
+    
     args = parser.parse_args()
     args.data = ROOT / "data" / args.data
     args.exp_path = ROOT / "experiment" / args.exp
@@ -205,9 +205,9 @@ def main_work(rank, world_size, args, logger):
 
     #################################### Train Model ####################################
     if args.rank == 0:
-        progress_bar = trange(start_epoch, args.num_epochs, total=args.num_epochs, initial=start_epoch, ncols=115)
+        progress_bar = trange(start_epoch, args.num_epochs+1, total=args.num_epochs, initial=start_epoch, ncols=115)
     else:
-        progress_bar = range(start_epoch, args.num_epochs)
+        progress_bar = range(start_epoch, args.num_epochs+1)
 
     best_epoch, best_score, best_mAP_str, mAP_dict = 0, 0, "", None
 
@@ -242,7 +242,7 @@ def main_work(rank, world_size, args, logger):
         scheduler.step()
 
     if mAP_dict and args.rank == 0:
-        logging.warning(f"[Best mAP at {best_epoch}]\n{best_mAP_str}")
+        logging.warning(f"[Best mAP at {best_epoch}]{best_mAP_str}")
     cleanup()
 
 

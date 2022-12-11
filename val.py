@@ -105,6 +105,7 @@ def parse_args(make_dirs=True):
     parser.add_argument("--conf_thres", type=float, default=0.001, help="Threshold to filter confidence score")
     parser.add_argument("--nms_thres", type=float, default=0.6, help="Threshold to filter Box IoU of NMS process")
     parser.add_argument("--ckpt_name", type=str, default="best.pt", help="Path to trained model")
+    parser.add_argument("--save_result", action="store_true", help="Mode to save prediction results with text file")
     parser.add_argument("--img_interval", type=int, default=10, help="Interval to log train/val image")
     parser.add_argument("--workers", type=int, default=8, help="Number of workers used in dataloader")
     parser.add_argument("--rank", type=int, default=0, help="Process id for computation")
@@ -145,9 +146,9 @@ def main():
         mAP_dict, eval_text = evaluator(predictions=cocoPred)
     else:
         val_loader = tqdm(val_loader, desc=f"[VAL:{0:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
-        mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator, save_result=True)
+        mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator, save_result=args.save_result)
     
-    logger.info(f"[Validation Result]\n{eval_text}")
+    logger.info(f"[Validation Result]{eval_text}")
     result_analyis(args=args, mAP_dict=mAP_dict["all"])
     
 
