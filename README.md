@@ -1,4 +1,4 @@
-# <div align="center">YOLOv1</div>
+# <div align="center">Object Detection: YOLOv1</div>
 
 ---
 
