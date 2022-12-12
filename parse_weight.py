@@ -31,5 +31,3 @@ if __name__ == "__main__":
     
     torch.save({"model_state": parsed_model_state}, f"./{args.exp}.pt")
     
-
-
