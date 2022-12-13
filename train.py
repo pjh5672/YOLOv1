@@ -36,19 +36,19 @@ from val import validate, result_analyis
 
 
 def setup(rank, world_size):
-    if OS_SYSTEM == 'Linux':
-        os.environ['MASTER_ADDR'] = 'localhost'
-        os.environ['MASTER_PORT'] = '12345'
-        dist.init_process_group('nccl', rank=rank, world_size=world_size)
+    if OS_SYSTEM == "Linux":
+        os.environ["MASTER_ADDR"] = "localhost"
+        os.environ["MASTER_PORT"] = "12345"
+        dist.init_process_group("nccl", rank=rank, world_size=world_size)
 
 
 def cleanup():
-    if OS_SYSTEM == 'Linux':
+    if OS_SYSTEM == "Linux":
         dist.destroy_process_group()
 
 
 def train(args, dataloader, model, criterion, optimizer, scaler):
-    loss_type = ['multipart', 'obj', 'noobj', 'box', 'cls']
+    loss_type = ["multipart", "obj", "noobj", "box", "cls"]
     losses = defaultdict(float)
     model.train()
     optimizer.zero_grad()
@@ -80,7 +80,7 @@ def train(args, dataloader, model, criterion, optimizer, scaler):
             else:
                 losses[loss_name] += loss_value.item()
 
-    del images, predictions, labels
+    del images, predictions
     torch.cuda.empty_cache()
     
     loss_str = f"[Train-Epoch:{epoch:03d}] "
@@ -136,7 +136,7 @@ def main_work(rank, world_size, args, logger):
     torch.manual_seed(SEED)
     torch.cuda.set_device(rank)
 
-    if OS_SYSTEM == 'Linux':
+    if OS_SYSTEM == "Linux":
         import logging
         setup_worker_logging(rank, logger)
     else:
@@ -176,7 +176,7 @@ def main_work(rank, world_size, args, logger):
     scaler = amp.GradScaler(enabled=not args.no_amp)
 
     model = model.cuda(args.rank)
-    if OS_SYSTEM == 'Linux':
+    if OS_SYSTEM == "Linux":
         model = DDP(model, device_ids=[args.rank])
         dist.barrier()
     #################################### Load Model #####################################
@@ -250,9 +250,9 @@ def main_work(rank, world_size, args, logger):
 if __name__ == "__main__":
     args = parse_args(make_dirs=True)
 
-    if OS_SYSTEM == 'Linux':
-        torch.multiprocessing.set_start_method('spawn', force=True)
-        logger = setup_primary_logging(args.exp_path / 'train.log')
+    if OS_SYSTEM == "Linux":
+        torch.multiprocessing.set_start_method("spawn", force=True)
+        logger = setup_primary_logging(args.exp_path / "train.log")
         mp.spawn(main_work, args=(args.world_size, args, logger), nprocs=args.world_size, join=True)
     else:
         logger = build_basic_logger(args.exp_path / "train.log")

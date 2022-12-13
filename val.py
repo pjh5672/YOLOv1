@@ -101,7 +101,6 @@ def parse_args(make_dirs=True):
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
     parser.add_argument("--img_size", type=int, default=448, help="Model input size")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size")
-    parser.add_argument("--num_epochs", type=int, default=1, help="Number of training epochs")
     parser.add_argument("--conf_thres", type=float, default=0.001, help="Threshold to filter confidence score")
     parser.add_argument("--nms_thres", type=float, default=0.6, help="Threshold to filter Box IoU of NMS process")
     parser.add_argument("--ckpt_name", type=str, default="best.pt", help="Path to trained model")
@@ -145,7 +144,7 @@ def main():
         cocoPred = np.loadtxt(args.exp_path / "predictions.txt", delimiter = ",", skiprows=1)
         mAP_dict, eval_text = evaluator(predictions=cocoPred)
     else:
-        val_loader = tqdm(val_loader, desc=f"[VAL:{0:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
+        val_loader = tqdm(val_loader, desc="[VAL]", ncols=115, leave=False)
         mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator, save_result=args.save_result)
     
     logger.info(f"[Validation Result]{eval_text}")

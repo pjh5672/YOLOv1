@@ -154,7 +154,7 @@ class Dataset:
 
 if __name__ == "__main__":
     yaml_path = ROOT / 'data' / 'toy.yaml'
-    input_size = 416
+    input_size = 448
     
     train_dataset = Dataset(yaml_path=yaml_path, phase='train')
     train_transformer = AugmentTransform(input_size=input_size)

@@ -26,9 +26,9 @@ In addition, we provide model weights that trained on the VOC dataset, so you ca
 | YOLOv1 VGG16<br><sup>(<u>Paper:page_with_curl:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | *not reported* | 66.4 | *not reported* | *not reported* |
 | YOLOv1 VGG16<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 33.7 | 66.1 | 25.49 | 127.00 |
 | YOLOv1 VGG16-BN<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 35.2 | 67.9 | 25.49 | 127.43 |
-| YOLOv1 ResNet18<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 39.8 | 69.1 | 21.95 | 18.81 |
-| YOLOv1 ResNet34<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 45.5 | 73.7 | 32.06 | 29.01 |
-| YOLOv1 ResNet50<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 44.3 | 74.7 | 35.06 | 37.58 |
+| YOLOv1 Resnet18<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 39.8 | 69.1 | 21.95 | 18.81 |
+| YOLOv1 Resnet34<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 45.5 | 73.7 | 32.06 | 29.01 |
+| YOLOv1 Resnet50<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 44.3 | 74.7 | 35.06 | 37.58 |
 
 
  - **Pretrained weights Download**
