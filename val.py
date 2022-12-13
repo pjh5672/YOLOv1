@@ -12,7 +12,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 
 ROOT = Path(__file__).resolve().parents[0]
-TIMESTAMP = datetime.today().strftime('%Y-%m-%d_%H-%M')
+TIMESTAMP = datetime.today().strftime("%Y-%m-%d_%H-%M")
 OS_SYSTEM = platform.system()
 SEED = 2023
 torch.manual_seed(SEED)
@@ -69,14 +69,14 @@ def validate(args, dataloader, model, evaluator, epoch=0, save_result=False):
             check_result = visualize_prediction(image=check_image, prediction=check_pred, class_list=args.class_list, color_list=args.color_list)
             check_results.append(check_result)
         concat_result = np.concatenate(check_results, axis=1)
-        imwrite(str(args.img_log_dir / f'EP_{epoch:03d}.jpg'), concat_result)
+        imwrite(str(args.img_log_dir / f"EP_{epoch:03d}.jpg"), concat_result)
 
     if len(cocoPred) > 0:
         cocoPred = np.concatenate(cocoPred, axis=0)
         mAP_dict, eval_text = evaluator(predictions=cocoPred)
 
         if save_result:
-            np.savetxt(args.exp_path / 'predictions.txt', cocoPred, fmt='%.4f', delimiter=',', header=f"Inference results of [image_id, x1y1wh, score, label] on {TIMESTAMP}") 
+            np.savetxt(args.exp_path / "predictions.txt", cocoPred, fmt="%.4f", delimiter=",", header=f"Inference results of [image_id, x1y1wh, score, label] on {TIMESTAMP}") 
         return mAP_dict, eval_text
     else:
         return None, None
@@ -85,13 +85,13 @@ def validate(args, dataloader, model, evaluator, epoch=0, save_result=False):
 def result_analyis(args, mAP_dict):
     analysis_result = analyse_mAP_info(mAP_dict, args.class_list)
     data_df, figure_AP, figure_dets, fig_PR_curves = analysis_result
-    data_df.to_csv(str(args.exp_path / f'result_AP.csv'))
-    figure_AP.savefig(str(args.exp_path / f'figure_AP.jpg'))
-    figure_dets.savefig(str(args.exp_path / f'figure_dets.jpg'))
-    PR_curve_dir = args.exp_path / 'PR_curve' 
+    data_df.to_csv(str(args.exp_path / f"result_AP.csv"))
+    figure_AP.savefig(str(args.exp_path / f"figure_AP.jpg"))
+    figure_dets.savefig(str(args.exp_path / f"figure_dets.jpg"))
+    PR_curve_dir = args.exp_path / "PR_curve" 
     os.makedirs(PR_curve_dir, exist_ok=True)
     for class_id in fig_PR_curves.keys():
-        fig_PR_curves[class_id].savefig(str(PR_curve_dir / f'{args.class_list[class_id]}.jpg'))
+        fig_PR_curves[class_id].savefig(str(PR_curve_dir / f"{args.class_list[class_id]}.jpg"))
         fig_PR_curves[class_id].clf()
 
 
