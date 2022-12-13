@@ -17,13 +17,13 @@ from utils import set_grid
 
 
 class YoloModel(nn.Module):
-    def __init__(self, input_size, backbone, num_classes, pretrained=True, depthwise=False):
+    def __init__(self, input_size, backbone, num_classes, pretrained=False):
         super().__init__()
         self.stride = 32
         self.grid_size = input_size // self.stride
         self.num_classes = num_classes
-        self.backbone, feat_dims = build_backbone(arch_name=backbone, pretrained=True)
-        self.neck = ConvBlock(in_channels=feat_dims, out_channels=512, depthwise=depthwise)
+        self.backbone, feat_dims = build_backbone(arch_name=backbone)
+        self.neck = ConvBlock(in_channels=feat_dims, out_channels=512)
         self.head = YoloHead(in_channels=512, num_classes=num_classes)
         grid_x, grid_y = set_grid(grid_size=self.grid_size)
         self.grid_x = grid_x.contiguous().view((1, -1))
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     inp = torch.randn(2, 3, input_size, input_size)
     device = torch.device('cuda')
 
-    model = YoloModel(input_size=input_size, backbone="resnet18", num_classes=num_classes, pretrained=True, depthwise=False).to(device)
+    model = YoloModel(input_size=input_size, backbone="resnet18", num_classes=num_classes, pretrained=True).to(device)
     model.train()
     out = model(inp.to(device))
     print(out.shape)

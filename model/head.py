@@ -24,7 +24,7 @@ if __name__ == "__main__":
     input_size = 448
     num_classes = 1
     backbone, feat_dims = build_backbone(arch_name="resnet18", pretrained=True)
-    neck = ConvBlock(in_channels=feat_dims, out_channels=512, depthwise=False)
+    neck = ConvBlock(in_channels=feat_dims, out_channels=512)
     head = YoloHead(in_channels=512, num_classes=num_classes)
 
     inp = torch.randn(1, 3, input_size, input_size)
