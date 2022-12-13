@@ -31,7 +31,7 @@ class YoloModel(nn.Module):
         
         if pretrained:
             ckpt = torch.load(ROOT / "weights" / f"yolov1_{backbone}.pt", map_location="cpu")
-            self.load_state_dict(ckpt["model_state"], strict=False)
+            self.load_state_dict(ckpt["model_state"], strict=True)
 
 
     def forward(self, x):
