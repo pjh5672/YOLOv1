@@ -31,7 +31,7 @@ In addition, we provide model weights that trained on the VOC dataset, so you ca
 | YOLOv1 Resnet50<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 44.3 | 74.7 | 35.06 | 37.58 |
 
 
- - **Pretrained weights Download**
+ - **Pretrained Model Weights Download**
 
 	- [YOLOv1 VGG16](https://drive.google.com/file/d/1Lqfya69RJvCFQCPR797J_Sf1NYJ8s0PJ/view?usp=share_link)
 	- [YOLOv1 VGG16-BN](https://drive.google.com/file/d/1cjNsdLymtUdDLaBM7F1SsGXHhJZsf5pJ/view?usp=share_link)
