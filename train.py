@@ -23,7 +23,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 ROOT = Path(__file__).resolve().parents[0]
 OS_SYSTEM = platform.system()
-TIMESTAMP = datetime.today().strftime('%Y-%m-%d_%H-%M')
+TIMESTAMP = datetime.today().strftime("%Y-%m-%d_%H-%M")
 cudnn.benchmark = True
 SEED = 2023
 random.seed(SEED)
@@ -74,8 +74,8 @@ def train(args, dataloader, model, criterion, optimizer, scaler):
             args.last_opt_step = ni
         
         for loss_name, loss_value in zip(loss_type, loss):
-            if not torch.isfinite(loss_value) and loss_name != 'multipart':
-                print(f'############## {loss_name} Loss is Nan/Inf ! {loss_value} ##############')
+            if not torch.isfinite(loss_value) and loss_name != "multipart":
+                print(f"############## {loss_name} Loss is Nan/Inf ! {loss_value} ##############")
                 sys.exit(0)
             else:
                 losses[loss_name] += loss_value.item()
@@ -99,7 +99,7 @@ def parse_args(make_dirs=True):
     parser.add_argument("--acc_batch_size", type=int, default=64, help="Batch size for gradient accumulation")
     parser.add_argument("--backbone", type=str, default="resnet18", help="Model architecture")
     parser.add_argument("--num_epochs", type=int, default=150, help="Number of training epochs")
-    parser.add_argument('--lr_decay', nargs='+', default=[90, 120], type=int, help='Epoch to learning rate decay')
+    parser.add_argument("--lr_decay", nargs="+", default=[90, 120], type=int, help="Epoch to learning rate decay")
     parser.add_argument("--warmup", type=int, default=1, help="Epochs for warming up training")
     parser.add_argument("--base_lr", type=float, default=0.001, help="Base learning rate")
     parser.add_argument("--momentum", type=float, default=0.9, help="Momentum")
@@ -196,7 +196,7 @@ def main_work(rank, world_size, args, logger):
                 if isinstance(v, torch.Tensor):
                     state[k] = v.cuda(args.rank)
         scheduler.load_state_dict(ckpt["scheduler_state"])
-        scaler.load_state_dict(ckpt['scaler_state_dict'])
+        scaler.load_state_dict(ckpt["scaler_state_dict"])
     else:
         start_epoch = 1
         if args.rank == 0:
@@ -226,7 +226,7 @@ def main_work(rank, world_size, args, logger):
                         "model_state": deepcopy(model.module).state_dict() if hasattr(model, "module") else deepcopy(model).state_dict(),
                         "optimizer_state": optimizer.state_dict(),
                         "scheduler_state": scheduler.state_dict(),
-                        'scaler_state_dict': scaler.state_dict()}
+                        "scaler_state_dict": scaler.state_dict()}
             torch.save(save_opt, args.weight_dir / "last.pt")
 
             if epoch % 10 == 0:
