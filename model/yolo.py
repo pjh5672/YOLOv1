@@ -30,7 +30,7 @@ class YoloModel(nn.Module):
         self.grid_y = grid_y.contiguous().view((1, -1))
         
         if pretrained:
-            ckpt = torch.load(f"./weights/yolov1_{backbone}.pt", map_location="cpu")
+            ckpt = torch.load(ROOT / "weights" / f"yolov1_{backbone}.pt", map_location="cpu")
             self.load_state_dict(ckpt["model_state"], strict=False)
 
 
