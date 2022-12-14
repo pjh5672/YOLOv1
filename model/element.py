@@ -2,7 +2,7 @@ from torch import nn
 
 
 class Conv(nn.Module):
-    def __init__(self, c1, c2, kernel_size, stride=1, padding=0, dilation=1, act='leaky_relu', depthwise=False):
+    def __init__(self, c1, c2, kernel_size, stride=1, padding=0, dilation=1, act="leaky_relu", depthwise=False):
         super().__init__()
         if act == "relu":
             act_func = nn.ReLU(inplace=True)
