@@ -4,6 +4,7 @@ from torch import nn
 class Conv(nn.Module):
     def __init__(self, c1, c2, kernel_size, stride=1, padding=0, dilation=1, act="leaky_relu", depthwise=False):
         super().__init__()
+
         if act == "relu":
             act_func = nn.ReLU(inplace=True)
         elif act == "leaky_relu":
@@ -18,7 +19,7 @@ class Conv(nn.Module):
                 nn.BatchNorm2d(c1),
                 act_func,
                 ### Point-wise ###
-                nn.Conv2d(c1, c2, kernel_size=1, stride=stride, padding=0, dilation=dilation, groups=1, bias=False),
+                nn.Conv2d(c1, c2, kernel_size=1, bias=False),
                 nn.BatchNorm2d(c2),
                 act_func,
             )
