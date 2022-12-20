@@ -8,9 +8,9 @@ class Conv(nn.Module):
         if act == "identity":
             act_func = nn.Identity()
         elif act == "relu":
-            act_func = nn.ReLU(inplace=True)
+            act_func = nn.ReLU()
         elif act == "leaky_relu":
-            act_func = nn.LeakyReLU(0.1, inplace=True)
+            act_func = nn.LeakyReLU(0.1)
 
         if depthwise:
             self.conv = nn.Sequential(
