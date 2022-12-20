@@ -200,7 +200,7 @@ def main_work(rank, world_size, args, logger):
         start_epoch = 1
         if args.rank == 0:
             logging.warning(f"[Arguments]\n{pprint.pformat(vars(args))}\n")
-            logging.warning(f"Architecture Info - Params(M): {params/1e+6:.2f}, FLOPS(B): {2*macs/1E+9:.2f}")
+            logging.warning(f"Architecture Info - Params(M): {params/1e+6:.2f}, FLOPs(B): {2*macs/1E+9:.2f}")
 
     #################################### Train Model ####################################
     if args.rank == 0:
