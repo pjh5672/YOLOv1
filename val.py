@@ -20,7 +20,7 @@ torch.manual_seed(SEED)
 from dataloader import Dataset, BasicTransform, to_image
 from model import YoloModel
 from utils import Evaluator, build_basic_logger, generate_random_color, transform_xcycwh_to_x1y1x2y2, \
-                  filter_confidence, run_NMS, scale_to_original, transform_x1y1x2y2_to_x1y1wh, \
+                  filter_confidence, run_NMS, scale_coords, transform_x1y1x2y2_to_x1y1wh, \
                   visualize_prediction, imwrite, analyse_mAP_info
 
 
@@ -54,7 +54,7 @@ def validate(args, dataloader, model, evaluator, epoch=0, save_result=False):
                 shape = shapes[j]
                 cls_id = prediction[:, [0]]
                 conf = prediction[:, [-1]]
-                box_x1y1x2y2 = scale_to_original(boxes=prediction[:, 1:5], scale_w=shape[1], scale_h=shape[0])
+                box_x1y1x2y2 = scale_coords(img1_shape=images.shape[2:], coords=prediction[:, 1:5], img0_shape=shape[:2])
                 box_x1y1wh = transform_x1y1x2y2_to_x1y1wh(boxes=box_x1y1x2y2)
                 img_id = np.array((imageToid[filename],) * len(cls_id))[:, np.newaxis]
                 cocoPred.append(np.concatenate((img_id, box_x1y1wh, conf, cls_id), axis=1))

@@ -41,7 +41,7 @@ In addition, we provide model weights that trained on the VOC dataset, so you ca
 
 
 
-![Train toy-1 dataset](./asset/toy_result.gif)
+![result](./asset/result.jpg)
 
 
 ## [Usage]

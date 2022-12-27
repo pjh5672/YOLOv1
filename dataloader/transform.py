@@ -29,12 +29,39 @@ def denormalize(image, mean=MEAN, std=STD):
     return image.astype(np.uint8)
 
 
+class LetterBox:
+    def __init__(self, new_shape=(448, 448), color=(0, 0, 0), stride=32):
+        self.new_shape = (new_shape, new_shape) if isinstance(new_shape, int) else new_shape
+        self.color = color
+
+    def __call__(self, image, boxes, labels=None):
+        # Resize and pad image while meeting stride-multiple constraints
+        shape = image.shape[:2]  # current shape [height, width]
+        # Scale ratio (new / old)
+        r = min(self.new_shape[0] / shape[0], self.new_shape[1] / shape[1])
+        # Compute padding
+        new_unpad = int(round(shape[1] * r)), int(round(shape[0] * r)) # [width, height]
+        dw, dh = self.new_shape[1] - new_unpad[0], self.new_shape[0] - new_unpad[1]  # wh padding
+        dw /= 2  # divide padding into 2 sides
+        dh /= 2
+
+        if shape[::-1] != new_unpad:  # resize
+            image = cv2.resize(image, new_unpad, interpolation=cv2.INTER_LINEAR)
+        top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
+        left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
+        image = cv2.copyMakeBorder(image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=self.color)
+        boxes[:, :2] = (boxes[:, :2] * (new_unpad[0], new_unpad[1]) + (left, top))
+        boxes[:, :2] /= (image.shape[1], image.shape[0])
+        boxes[:, 2:] /= (image.shape[1] / new_unpad[0], image.shape[0] / new_unpad[1])
+        return image, boxes, labels
+
+
 class BasicTransform:
     def __init__(self, input_size, mean=MEAN, std=STD):
         mean = np.array(mean, dtype=np.float32)
         std = np.array(std, dtype=np.float32)
         self.tfs = Compose([
-            Resize(size=input_size),
+            LetterBox(new_shape=(input_size, input_size)),
             Normalize(mean=mean, std=std)
         ])
 
@@ -56,7 +83,6 @@ class AugmentTransform:
             RandomHue(),
             RandomSaturation(),
             ConvertColor(color_from="HSV", color_to="BGR"),
-            #############################
             ##### Geometric Augment #####
             ToXminYminXmaxYmax(),
             ToAbsoluteCoords(),
@@ -326,8 +352,8 @@ if __name__ == "__main__":
     input_size = 448
     index = -1
     train_dataset = Dataset(yaml_path=yaml_path, phase='train')
-    train_transformer = AugmentTransform(input_size=416)
-    # train_transformer = BasicTransform(input_size=416)
+    train_transformer = AugmentTransform(input_size=input_size)
+    # train_transformer = BasicTransform(input_size=input_size)
     class_list = train_dataset.class_list
     color_list = generate_random_color(len(class_list))
 
