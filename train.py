@@ -31,7 +31,7 @@ torch.manual_seed(SEED)
 
 from dataloader import Dataset, BasicTransform, AugmentTransform
 from model import YoloModel
-from utils import YoloLoss, Evaluator, generate_random_color, set_lr, build_basic_logger, setup_worker_logging, setup_primary_logging
+from utils import YoloLoss, Evaluator, generate_random_color, set_lr, build_basic_logger, setup_worker_logging, setup_primary_logging, de_parallel
 from val import validate, result_analyis
 
 
@@ -221,7 +221,7 @@ def main_work(rank, world_size, args, logger):
             save_opt = {"running_epoch": epoch,
                         "backbone": args.backbone,
                         "class_list": args.class_list,
-                        "model_state": deepcopy(model.module).state_dict() if hasattr(model, "module") else deepcopy(model).state_dict(),
+                        "model_state": deepcopy(de_parallel(model)).state_dict(),
                         "optimizer_state": optimizer.state_dict(),
                         "scheduler_state": scheduler.state_dict(),
                         "scaler_state_dict": scaler.state_dict()}

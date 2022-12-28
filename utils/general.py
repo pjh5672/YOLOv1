@@ -1,7 +1,21 @@
 import os
+from copy import deepcopy
+
 import cv2
 import torch
 import numpy as np
+from torch import nn
+
+
+
+def is_parallel(model):
+    # Returns True if model is of type DP or DDP
+    return type(model) in (nn.parallel.DataParallel, nn.parallel.DistributedDataParallel)
+
+
+def de_parallel(model):
+    # De-parallelize a model: returns single-GPU model if model is of type DP or DDP
+    return model.module if is_parallel(model) else model
 
 
 def scale_coords(img1_shape, coords, img0_shape):
@@ -20,7 +34,6 @@ def clip_coords(boxes, shape):
     # Clip bounding xyxy bounding boxes to image shape (height, width)
     boxes[:, [0, 2]] = boxes[:, [0, 2]].clip(0, shape[1])  # x1, x2
     boxes[:, [1, 3]] = boxes[:, [1, 3]].clip(0, shape[0])  # y1, y2
-
 
 
 def set_grid(grid_size):
