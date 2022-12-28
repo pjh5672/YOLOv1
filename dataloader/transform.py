@@ -61,7 +61,7 @@ class BasicTransform:
         mean = np.array(mean, dtype=np.float32)
         std = np.array(std, dtype=np.float32)
         self.tfs = Compose([
-            LetterBox(new_shape=(input_size, input_size)),
+            LetterBox(new_shape=input_size),
             Normalize(mean=mean, std=std)
         ])
 
@@ -92,7 +92,7 @@ class AugmentTransform:
             ToPercentCoords(),
             ToXcenYcenWH(),
             #############################
-            Resize(size=input_size),
+            LetterBox(new_shape=input_size),
             Normalize(mean=mean, std=std)
         ])
 
@@ -292,7 +292,6 @@ class RandomSampleCrop:
             
             for _ in range(50):
                 current_image = image
-
                 w = np.random.uniform(0.3 * width, width)
                 h = np.random.uniform(0.3 * height, height)
                 if max(h,w) / min(h,w) > 2:
@@ -361,8 +360,6 @@ if __name__ == "__main__":
     image, boxes, labels = train_transformer(image=image, boxes=label[:, 1:5], labels=label[:, 0])
     label = np.concatenate((labels[:, np.newaxis], boxes), axis=1)
     image = denormalize(image)
-    image_with_bbox = visualize_target(image=image, label=label, 
-                                       class_list=class_list, 
-                                       color_list=color_list)
+    image_with_bbox = visualize_target(image=image, label=label, class_list=class_list, color_list=color_list)
 
     cv2.imwrite(f'./asset/augment.jpg', image_with_bbox)
