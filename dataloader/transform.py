@@ -30,7 +30,7 @@ def denormalize(image, mean=MEAN, std=STD):
 
 
 class LetterBox:
-    def __init__(self, new_shape=(448, 448), color=(0, 0, 0), stride=32):
+    def __init__(self, new_shape=(448, 448), color=(0, 0, 0)):
         self.new_shape = (new_shape, new_shape) if isinstance(new_shape, int) else new_shape
         self.color = color
 
@@ -79,10 +79,10 @@ class AugmentTransform:
             #### Photometric Augment ####
             RandomBrightness(),
             RandomContrast(),
-            ConvertColor(color_from="BGR", color_to="HSV"),
+            ConvertColor(color_from="RGB", color_to="HSV"),
             RandomHue(),
             RandomSaturation(),
-            ConvertColor(color_from="HSV", color_to="BGR"),
+            ConvertColor(color_from="HSV", color_to="RGB"),
             ##### Geometric Augment #####
             ToXminYminXmaxYmax(),
             ToAbsoluteCoords(),
@@ -159,15 +159,15 @@ class RandomContrast:
 
 
 class ConvertColor:
-    def __init__(self, color_from="BGR", color_to="HSV"):
+    def __init__(self, color_from="RGB", color_to="HSV"):
         self.color_from = color_from
         self.color_to = color_to
         
     def __call__(self, image, boxes=None, labels=None):
-        if self.color_from == "BGR" and self.color_to == "HSV":
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        elif self.color_from == "HSV" and self.color_to == "BGR":
-            image = cv2.cvtColor(image, cv2.COLOR_HSV2BGR)
+        if self.color_from == "RGB" and self.color_to == "HSV":
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+        elif self.color_from == "HSV" and self.color_to == "RGB":
+            image = cv2.cvtColor(image, cv2.COLOR_HSV2RGB)
         else:
             raise NotImplementedError
         return image, boxes, labels
