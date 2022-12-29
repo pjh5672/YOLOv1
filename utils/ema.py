@@ -1,3 +1,4 @@
+import math
 import torch
 from torch import nn
 from copy import deepcopy
@@ -14,30 +15,24 @@ def de_parallel(model):
 
 
 class ModelEMA:
-    """ Model Exponential Moving Average
-    Keep a moving average of everything in the model state_dict (parameters and buffers).
-    V2 of this module is simpler, it does not match params/buffers based on name but simply
-    iterates in order. It works with torchscript (JIT of full model).
-    This is intended to allow functionality like
-    https://www.tensorflow.org/api_docs/python/tf/train/ExponentialMovingAverage
-    A smoothed version of the weights is necessary for some training schemes to perform well.
-    E.g. Google's hyper-params for training MNASNet, MobileNet-V3, EfficientNet, etc that use
-    RMSprop with a short 2.4-3 epoch decay period and slow LR decay rate of .96-.99 requires EMA
-    smoothing of weights to match results. Pay attention to the decay constant you are using
-    relative to your update count per epoch.
-    To keep EMA from using GPU resources, set device='cpu'. This will save a bit of memory but
-    disable validation of the EMA weights. Validation will have to be done manually in a separate
-    process, or after the training stops converging.
-    This class is sensitive where it is initialized in the sequence of model init,
-    GPU assignment and distributed training wrappers.
+    """ Updated Exponential Moving Average (EMA) from https://github.com/rwightman/pytorch-image-models
+    Keeps a moving average of everything in the model state_dict (parameters and buffers)
+    For EMA details see https://www.tensorflow.org/api_docs/python/tf/train/ExponentialMovingAverage
     """
-    def __init__(self, model, decay=0.9999):
-        self.module = deepcopy(de_parallel(model)).eval()
-        self.decay = decay
+    def __init__(self, model, decay=0.9999, tau=2000, updates=0):
+        # Create EMA
+        self.module = deepcopy(de_parallel(model)).eval()  # FP32 EMA
+        self.updates = updates  # number of EMA updates
+        self.decay = lambda x: decay * (1 - math.exp(-x / tau))  # decay exponential ramp (to help early epochs)
 
     @torch.no_grad()
     def update(self, model):
-        msd = de_parallel(model).state_dict()
+        # Update EMA parameters
+        self.updates += 1
+        d = self.decay(self.updates)
+
+        msd = de_parallel(model).state_dict()  # model state_dict
         for k, v in self.module.state_dict().items():
-            if v.dtype.is_floating_point:
-                v = (self.decay * v) + (1 - self.decay) * msd[k].detach()
+            if v.dtype.is_floating_point:  # true for FP16 and FP32
+                v *= d
+                v += (1 - d) * msd[k].detach()

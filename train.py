@@ -65,7 +65,6 @@ def train(args, dataloader, model, ema, criterion, optimizer, scaler):
         with amp.autocast(enabled=not args.no_amp):
             predictions = model(images.cuda(args.rank, non_blocking=True))
             loss = criterion(predictions=predictions, labels=labels)
-
         scaler.scale((loss[0] / args.grad_accumulate) * args.world_size).backward()
         
         if ni - args.last_opt_step >= args.grad_accumulate:
@@ -168,7 +167,7 @@ def main_work(rank, world_size, args, logger):
     args.color_list = generate_random_color(len(args.class_list))
     args.nw = max(round(args.warmup * len(train_loader)), 100)
     args.mAP_file_path = val_dataset.mAP_file_path
-    
+
     model = YoloModel(input_size=args.img_size, backbone=args.backbone, num_classes=len(args.class_list), pretrained=not args.scratch).cuda(args.rank)
     macs, params = profile(deepcopy(model), inputs=(torch.randn(1, 3, args.img_size, args.img_size).cuda(args.rank),), verbose=False)
     criterion = YoloLoss(grid_size=model.grid_size, label_smoothing=args.label_smoothing)
@@ -177,7 +176,7 @@ def main_work(rank, world_size, args, logger):
     evaluator = Evaluator(annotation_file=args.mAP_file_path)
     scaler = amp.GradScaler(enabled=not args.no_amp)
     ema = ModelEMA(model=model) if args.rank == 0 else None
-    
+
     #################################### Load Model #####################################
     if args.resume:
         assert args.load_path.is_file(), "Not exist trained weights in the directory path !"
@@ -199,7 +198,6 @@ def main_work(rank, world_size, args, logger):
         progress_bar = range(start_epoch, args.num_epochs+1)
 
     best_epoch, best_score, best_mAP_str, mAP_dict = 0, 0, "", None
-
     for epoch in progress_bar:
         if args.rank == 0:
             train_loader = tqdm(train_loader, desc=f"[TRAIN:{epoch:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
@@ -213,6 +211,7 @@ def main_work(rank, world_size, args, logger):
                         "class_list": args.class_list,
                         "model_state": deepcopy(de_parallel(model)).state_dict(),
                         "ema_state": deepcopy(ema.module).state_dict(),
+                        "ema_update": ema.updates,
                         "optimizer_state": optimizer.state_dict(),
                         "scheduler_state": scheduler.state_dict(),
                         "scaler_state_dict": scaler.state_dict()}

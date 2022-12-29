@@ -14,5 +14,6 @@ def resume_state(ckpt_path, rank, model, ema, optimizer, scheduler, scaler):
     scheduler.load_state_dict(ckpt["scheduler_state"])
     scaler.load_state_dict(ckpt["scaler_state_dict"])
     if ema and ckpt.get("ema_state"):
+        ema.updates = ckpt['ema_update']
         ema.module.load_state_dict(ckpt['ema_state'], strict=True)
     return start_epoch
