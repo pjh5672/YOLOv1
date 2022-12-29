@@ -136,7 +136,7 @@ def main():
     args.mAP_file_path = val_dataset.mAP_file_path
 
     model = YoloModel(input_size=args.img_size, backbone=ckpt["backbone"], num_classes=len(args.class_list)).cuda(args.rank)
-    model.load_state_dict(ckpt["ema_state" if ckpt.get["ema_state"] else "model_state"], strict=True)
+    model.load_state_dict(ckpt["ema_state" if ckpt.get("ema_state") else "model_state"], strict=True)
     evaluator = Evaluator(annotation_file=args.mAP_file_path)
 
     if (args.exp_path / "predictions.txt").is_file():
