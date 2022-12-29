@@ -99,13 +99,13 @@ def parse_args(make_dirs=True):
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp", type=str, required=True, help="Name to log training")
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
-    parser.add_argument("--img_size", type=int, default=448, help="Model input size")
-    parser.add_argument("--batch_size", type=int, default=16, help="Batch size")
-    parser.add_argument("--conf_thres", type=float, default=0.001, help="Threshold to filter confidence score")
-    parser.add_argument("--nms_thres", type=float, default=0.6, help="Threshold to filter Box IoU of NMS process")
-    parser.add_argument("--ckpt_name", type=str, default="best.pt", help="Path to trained model")
-    parser.add_argument("--save_result", action="store_true", help="Mode to save prediction results with text file")
-    parser.add_argument("--img_interval", type=int, default=10, help="Interval to log train/val image")
+    parser.add_argument("--img-size", type=int, default=448, help="Model input size")
+    parser.add_argument("--batch-size", type=int, default=16, help="Batch size")
+    parser.add_argument("--conf-thres", type=float, default=0.001, help="Threshold to filter confidence score")
+    parser.add_argument("--nms-thres", type=float, default=0.6, help="Threshold to filter Box IoU of NMS process")
+    parser.add_argument("--ckpt-name", type=str, default="best.pt", help="Path to trained model")
+    parser.add_argument("--save-result", action="store_true", help="Mode to save prediction results with text file")
+    parser.add_argument("--img-interval", type=int, default=10, help="Interval to log train/val image")
     parser.add_argument("--workers", type=int, default=8, help="Number of workers used in dataloader")
     parser.add_argument("--rank", type=int, default=0, help="Process id for computation")
     
@@ -135,9 +135,8 @@ def main():
     args.color_list = generate_random_color(len(args.class_list))
     args.mAP_file_path = val_dataset.mAP_file_path
 
-    model = YoloModel(input_size=args.img_size, backbone=ckpt["backbone"], num_classes=len(args.class_list))
-    model.load_state_dict(ckpt["model_state"], strict=True)
-    model = model.cuda(args.rank)
+    model = YoloModel(input_size=args.img_size, backbone=ckpt["backbone"], num_classes=len(args.class_list)).cuda(args.rank)
+    model.load_state_dict(ckpt["ema_state"] if ckpt.get["ema_state"] else ckpt["model_state"], strict=True)
     evaluator = Evaluator(annotation_file=args.mAP_file_path)
 
     if (args.exp_path / "predictions.txt").is_file():

@@ -31,7 +31,8 @@ torch.manual_seed(SEED)
 
 from dataloader import Dataset, BasicTransform, AugmentTransform
 from model import YoloModel
-from utils import YoloLoss, Evaluator, generate_random_color, set_lr, build_basic_logger, setup_worker_logging, setup_primary_logging, de_parallel
+from utils import (YoloLoss, Evaluator, ModelEMA,
+                   resume_state, generate_random_color, set_lr, build_basic_logger, setup_worker_logging, setup_primary_logging, de_parallel)
 from val import validate, result_analyis
 
 
@@ -47,7 +48,7 @@ def cleanup():
         dist.destroy_process_group()
 
 
-def train(args, dataloader, model, criterion, optimizer, scaler):
+def train(args, dataloader, model, ema, criterion, optimizer, scaler):
     loss_type = ["multipart", "obj", "noobj", "box", "cls"]
     losses = defaultdict(float)
     model.train()
@@ -56,7 +57,7 @@ def train(args, dataloader, model, criterion, optimizer, scaler):
     for i, minibatch in enumerate(dataloader):
         ni = i + len(dataloader) * (epoch - 1)
         if ni <= args.nw:
-            args.grad_accumulate = max(1, np.interp(ni, [0, args.nw], [1, args.acc_batch_size / args.batch_size]).round())
+            args.grad_accumulate = max(1, np.interp(ni, [0, args.nw], [1, args.nominal_batch_size / args.batch_size]).round())
             set_lr(optimizer, args.base_lr * pow(ni / (args.nw), 4))
 
         images, labels = minibatch[1], minibatch[2]
@@ -71,6 +72,8 @@ def train(args, dataloader, model, criterion, optimizer, scaler):
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad()
+            if ema is not None:
+                ema.update(model)
             args.last_opt_step = ni
         
         for loss_name, loss_value in zip(loss_type, loss):
@@ -94,24 +97,24 @@ def parse_args(make_dirs=True):
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp", type=str, required=True, help="Name to log training")
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
-    parser.add_argument("--img_size", type=int, default=448, help="Model input size")
-    parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
-    parser.add_argument("--acc_batch_size", type=int, default=64, help="Batch size for gradient accumulation")
+    parser.add_argument("--img-size", type=int, default=448, help="Model input size")
+    parser.add_argument("--batch-size", type=int, default=32, help="Batch size")
+    parser.add_argument("--acc-batch-size", type=int, default=64, help="Batch size for gradient accumulation")
     parser.add_argument("--backbone", type=str, default="resnet18", help="Model architecture")
-    parser.add_argument("--num_epochs", type=int, default=150, help="Number of training epochs")
-    parser.add_argument("--lr_decay", nargs="+", default=[90, 120], type=int, help="Epoch to learning rate decay")
+    parser.add_argument("--num-epochs", type=int, default=150, help="Number of training epochs")
     parser.add_argument("--warmup", type=int, default=1, help="Epochs for warming up training")
-    parser.add_argument("--base_lr", type=float, default=0.001, help="Base learning rate")
+    parser.add_argument("--lr-decay", nargs="+", default=[90, 120], type=int, help="Epoch to learning rate decay")
+    parser.add_argument("--base-lr", type=float, default=0.001, help="Base learning rate")
     parser.add_argument("--momentum", type=float, default=0.9, help="Momentum")
-    parser.add_argument("--weight_decay", type=float, default=5e-4, help="Weight decay")
-    parser.add_argument("--label_smoothing", type=float, default=0.1, help="Label smoothing")
-    parser.add_argument("--conf_thres", type=float, default=0.001, help="Threshold to filter confidence score")
-    parser.add_argument("--nms_thres", type=float, default=0.6, help="Threshold to filter Box IoU of NMS process")
-    parser.add_argument("--img_interval", type=int, default=10, help="Interval to log train/val image")
+    parser.add_argument("--weight-decay", type=float, default=5e-4, help="Weight decay")
+    parser.add_argument("--label-smoothing", type=float, default=0.1, help="Label smoothing")
+    parser.add_argument("--conf-thres", type=float, default=0.001, help="Threshold to filter confidence score")
+    parser.add_argument("--nms-thres", type=float, default=0.6, help="Threshold to filter Box IoU of NMS process")
+    parser.add_argument("--img-interval", type=int, default=10, help="Interval to log train/val image")
     parser.add_argument("--workers", type=int, default=8, help="Number of workers used in dataloader")
-    parser.add_argument("--world_size", type=int, default=1, help="Number of available GPU devices")
+    parser.add_argument("--world-size", type=int, default=1, help="Number of available GPU devices")
     parser.add_argument("--rank", type=int, default=0, help="Process id for computation")
-    parser.add_argument("--no_amp", action="store_true", help="Use of FP32 training (default: AMP training)")
+    parser.add_argument("--no-amp", action="store_true", help="Use of FP32 training (default: AMP training)")
     parser.add_argument("--scratch", action="store_true", help="Scratch training without pretrained weights")
     parser.add_argument("--resume", action="store_true", help="Name to resume path")
     
@@ -145,8 +148,9 @@ def main_work(rank, world_size, args, logger):
 
     args.rank = rank
     args.last_opt_step = -1
+    args.nominal_batch_size = 64
     args.batch_size = args.batch_size // world_size
-    args.grad_accumulate = max(round(args.acc_batch_size / args.batch_size), 1)
+    args.grad_accumulate = max(round(args.nominal_batch_size / args.batch_size), 1)
     args.workers = min([os.cpu_count() // max(world_size, 1), args.batch_size if args.batch_size > 1 else 0, args.workers])
     
     train_dataset = Dataset(yaml_path=args.data, phase="train")
@@ -166,36 +170,19 @@ def main_work(rank, world_size, args, logger):
     args.nw = max(round(args.warmup * len(train_loader)), 100)
     args.mAP_file_path = val_dataset.mAP_file_path
     
-    model = YoloModel(input_size=args.img_size, backbone=args.backbone, num_classes=len(args.class_list), pretrained=not args.scratch)
-    macs, params = profile(deepcopy(model), inputs=(torch.randn(1, 3, args.img_size, args.img_size),), verbose=False)
+    model = YoloModel(input_size=args.img_size, backbone=args.backbone, num_classes=len(args.class_list), pretrained=not args.scratch).cuda(args.rank)
+    macs, params = profile(deepcopy(model), inputs=(torch.randn(1, 3, args.img_size, args.img_size).cuda(args.rank),), verbose=False)
     criterion = YoloLoss(grid_size=model.grid_size, label_smoothing=args.label_smoothing)
     optimizer = optim.SGD(model.parameters(), lr=args.base_lr, momentum=args.momentum, weight_decay=args.weight_decay)
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_decay, gamma=0.1)
     evaluator = Evaluator(annotation_file=args.mAP_file_path)
     scaler = amp.GradScaler(enabled=not args.no_amp)
-
-    model = model.cuda(args.rank)
-    if OS_SYSTEM == "Linux":
-        model = DDP(model, device_ids=[args.rank])
-        dist.barrier()
+    ema = ModelEMA(model=model) if args.rank == 0 else None
+    
     #################################### Load Model #####################################
-
     if args.resume:
         assert args.load_path.is_file(), "Not exist trained weights in the directory path !"
-        
-        ckpt = torch.load(args.load_path, map_location="cpu")
-        start_epoch = ckpt["running_epoch"]
-        if hasattr(model, "module"):
-            model.module.load_state_dict(ckpt["model_state"], strict=True)
-        else:
-            model.load_state_dict(ckpt["model_state"], strict=True)
-        optimizer.load_state_dict(ckpt["optimizer_state"])
-        for state in optimizer.state.values():
-            for k, v in state.items():
-                if isinstance(v, torch.Tensor):
-                    state[k] = v.cuda(args.rank)
-        scheduler.load_state_dict(ckpt["scheduler_state"])
-        scaler.load_state_dict(ckpt["scaler_state_dict"])
+        start_epoch = resume_state(args.load_path, args.rank, model, ema, optimizer, scheduler, scaler)
     else:
         start_epoch = 1
         if args.rank == 0:
@@ -203,6 +190,10 @@ def main_work(rank, world_size, args, logger):
             logging.warning(f"Architecture Info - Params(M): {params/1e+6:.2f}, FLOPs(B): {2*macs/1E+9:.2f}")
 
     #################################### Train Model ####################################
+    if OS_SYSTEM == "Linux":
+        model = DDP(model, device_ids=[args.rank])
+        dist.barrier()
+
     if args.rank == 0:
         progress_bar = trange(start_epoch, args.num_epochs+1, total=args.num_epochs, initial=start_epoch, ncols=115)
     else:
@@ -214,7 +205,7 @@ def main_work(rank, world_size, args, logger):
         if args.rank == 0:
             train_loader = tqdm(train_loader, desc=f"[TRAIN:{epoch:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
         train_sampler.set_epoch(epoch)
-        train_loss_str = train(args=args, dataloader=train_loader, model=model, criterion=criterion, optimizer=optimizer, scaler=scaler)
+        train_loss_str = train(args=args, dataloader=train_loader, model=model, ema=ema, criterion=criterion, optimizer=optimizer, scaler=scaler)
 
         if args.rank == 0:
             logging.warning(train_loss_str) 
@@ -222,6 +213,7 @@ def main_work(rank, world_size, args, logger):
                         "backbone": args.backbone,
                         "class_list": args.class_list,
                         "model_state": deepcopy(de_parallel(model)).state_dict(),
+                        "ema_state": deepcopy(ema.module).state_dict(),
                         "optimizer_state": optimizer.state_dict(),
                         "scheduler_state": scheduler.state_dict(),
                         "scaler_state_dict": scaler.state_dict()}
@@ -229,7 +221,7 @@ def main_work(rank, world_size, args, logger):
 
             if epoch % 10 == 0:
                 val_loader = tqdm(val_loader, desc=f"[VAL:{epoch:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
-                mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=model, evaluator=evaluator, epoch=epoch)
+                mAP_dict, eval_text = validate(args=args, dataloader=val_loader, model=ema.module, evaluator=evaluator, epoch=epoch)
                 ap50 = mAP_dict["all"]["mAP_50"]
                 logging.warning(eval_text)
 

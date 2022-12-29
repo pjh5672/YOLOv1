@@ -1,23 +1,9 @@
 import os
-from copy import deepcopy
-
 import cv2
 import torch
 import numpy as np
-from torch import nn
 
-
-
-def is_parallel(model):
-    # Returns True if model is of type DP or DDP
-    return type(model) in (nn.parallel.DataParallel, nn.parallel.DistributedDataParallel)
-
-
-def de_parallel(model):
-    # De-parallelize a model: returns single-GPU model if model is of type DP or DDP
-    return model.module if is_parallel(model) else model
-
-
+        
 def scale_coords(img1_shape, coords, img0_shape):
     # Rescale coords (xyxy) from img1_shape to img0_shape
     gain = min(img1_shape[0] / img0_shape[0], img1_shape[1] / img0_shape[1])  # gain  = old / new

@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[0]
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp", type=str, required=True, help="Name to log training")
-    parser.add_argument("--ckpt_name", type=str, default="best.pt", help="Path to trained model")
+    parser.add_argument("--ckpt-name", type=str, default="best.pt", help="Path to trained model")
 
     args = parser.parse_args()
     args.exp_path = ROOT / "experiment" / args.exp
