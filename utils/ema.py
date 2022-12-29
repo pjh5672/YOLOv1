@@ -14,7 +14,7 @@ def de_parallel(model):
 
 
 class ModelEMA:
-    """ Model Exponential Moving Average V2
+    """ Model Exponential Moving Average
     Keep a moving average of everything in the model state_dict (parameters and buffers).
     V2 of this module is simpler, it does not match params/buffers based on name but simply
     iterates in order. It works with torchscript (JIT of full model).
@@ -32,12 +32,12 @@ class ModelEMA:
     GPU assignment and distributed training wrappers.
     """
     def __init__(self, model, decay=0.9999):
-        self.module = deepcopy(de_parallel(model)).eval()  # FP32 EMA
+        self.module = deepcopy(de_parallel(model)).eval()
         self.decay = decay
 
     @torch.no_grad()
     def update(self, model):
         msd = de_parallel(model).state_dict()
         for k, v in self.module.state_dict().items():
-            if v.dtype.is_floating_point:  # true for FP16 and FP32
+            if v.dtype.is_floating_point:
                 v = (self.decay * v) + (1 - self.decay) * msd[k].detach()

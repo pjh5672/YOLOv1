@@ -99,7 +99,6 @@ def parse_args(make_dirs=True):
     parser.add_argument("--data", type=str, default="toy.yaml", help="Path to data.yaml")
     parser.add_argument("--img-size", type=int, default=448, help="Model input size")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size")
-    parser.add_argument("--acc-batch-size", type=int, default=64, help="Batch size for gradient accumulation")
     parser.add_argument("--backbone", type=str, default="resnet18", help="Model architecture")
     parser.add_argument("--num-epochs", type=int, default=150, help="Number of training epochs")
     parser.add_argument("--warmup", type=int, default=1, help="Epochs for warming up training")
