@@ -198,6 +198,7 @@ def main_work(rank, world_size, args, logger):
         progress_bar = range(start_epoch, args.num_epochs+1)
 
     best_epoch, best_score, best_mAP_str, mAP_dict = 0, 0, "", None
+    
     for epoch in progress_bar:
         if args.rank == 0:
             train_loader = tqdm(train_loader, desc=f"[TRAIN:{epoch:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
