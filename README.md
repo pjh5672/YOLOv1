@@ -52,7 +52,7 @@ In addition, we provide model weights that trained on the VOC dataset, so you ca
 ```python
 python train.py --exp my_test 
 		--data voc.yaml 
-		--backbone {vgg16, vgg16_bn, resnet18, resnet34, resnet50, resnet101}
+		--backbone {vgg16, vgg16-bn, resnet18, resnet34, resnet50, resnet101}
 		--scratch (optional)
 ```
 

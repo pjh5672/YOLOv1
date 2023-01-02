@@ -10,7 +10,7 @@ model_urls = {
     'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
     'resnet101': 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth',
     'vgg16': 'https://download.pytorch.org/models/vgg16-397923af.pth',
-    'vgg16_bn': 'https://download.pytorch.org/models/vgg16_bn-6c64b313.pth',
+    'vgg16-bn': 'https://download.pytorch.org/models/vgg16_bn-6c64b313.pth',
 }
 
 
@@ -101,7 +101,7 @@ def build_backbone(arch_name="resnet18", pretrained=True):
     feat_dims = 512
     if arch_name == "vgg16":
         model = VGG16(batch_norm=False)
-    elif arch_name == "vgg16_bn":
+    elif arch_name == "vgg16-bn":
         model = VGG16(batch_norm=True)
     elif arch_name == "resnet18":
         model = ResNet(BasicBlock, [2, 2, 2, 2])
