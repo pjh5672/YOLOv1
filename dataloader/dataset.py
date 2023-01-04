@@ -35,9 +35,9 @@ class Dataset:
         self.label_paths = self.replace_image2label_path(self.image_paths)
         self.generate_no_label(self.label_paths)
         
-        self.mAP_file_path = None
+        self.mAP_filepath = None
         if phase == "val":
-            self.generate_mAP_source(save_dir=Path("./data/eval_src"), mAP_file_name=data_item["MAP_FILE_NAME"])
+            self.generate_mAP_source(save_dir=Path("./data/eval_src"), mAP_filename=data_item["VAL_FILE"])
 
 
     def __len__(self): return len(self.image_paths)
@@ -94,12 +94,12 @@ class Dataset:
         self.transformer = transformer
 
 
-    def generate_mAP_source(self, save_dir, mAP_file_name):
+    def generate_mAP_source(self, save_dir, mAP_filename):
         if not save_dir.is_dir():
             os.makedirs(save_dir, exist_ok=True)
-        self.mAP_file_path = save_dir / mAP_file_name
+        self.mAP_filepath = save_dir / mAP_filename
         
-        if not self.mAP_file_path.is_file():
+        if not self.mAP_filepath.is_file():
             class_id2category = self.class_list
     
             mAP_file_formatter = {}
@@ -133,7 +133,7 @@ class Dataset:
             for i, cate_name in class_id2category.items():
                 mAP_file_formatter["categories"].append({"id": i, "supercategory": "", "name": cate_name})
 
-            with open(self.mAP_file_path, "w") as outfile:
+            with open(self.mAP_filepath, "w") as outfile:
                 json.dump(mAP_file_formatter, outfile)
 
 

@@ -8,7 +8,7 @@ TRAIN:
 VAL: 
  - images/test2007
 
-MAP_FILE_NAME: voc_val.json
+VAL_FILE: voc-val.json
 
 CLASS_INFO: {
   0: 'aeroplane',

@@ -32,7 +32,8 @@ torch.manual_seed(SEED)
 from dataloader import Dataset, BasicTransform, AugmentTransform
 from model import YoloModel
 from utils import (YoloLoss, Evaluator, ModelEMA,
-                   resume_state, generate_random_color, set_lr, build_basic_logger, setup_worker_logging, setup_primary_logging, de_parallel)
+                   resume_state, generate_random_color, set_lr, 
+                   build_basic_logger, setup_worker_logging, setup_primary_logging, de_parallel)
 from val import validate, result_analyis
 
 
@@ -120,7 +121,7 @@ def parse_args(make_dirs=True):
     args.data = ROOT / "data" / args.data
     args.exp_path = ROOT / "experiment" / args.exp
     args.weight_dir = args.exp_path / "weight"
-    args.img_log_dir = args.exp_path / "train_image"
+    args.img_log_dir = args.exp_path / "train-image"
     args.load_path = args.weight_dir / "last.pt" if args.resume else None
     assert args.world_size > 0, "Executable GPU machine does not exist, This training supports on CUDA available environment."
 
@@ -141,6 +142,7 @@ def main_work(rank, world_size, args, logger):
         setup_worker_logging(rank, logger)
     else:
         logging = logger
+
     ################################### Init Instance ###################################
     global epoch
 
@@ -166,14 +168,14 @@ def main_work(rank, world_size, args, logger):
     args.class_list = train_dataset.class_list
     args.color_list = generate_random_color(len(args.class_list))
     args.nw = max(round(args.warmup * len(train_loader)), 100)
-    args.mAP_file_path = val_dataset.mAP_file_path
+    args.mAP_filepath = val_dataset.mAP_filepath
 
     model = YoloModel(input_size=args.img_size, backbone=args.backbone, num_classes=len(args.class_list), pretrained=not args.scratch).cuda(args.rank)
     macs, params = profile(deepcopy(model), inputs=(torch.randn(1, 3, args.img_size, args.img_size).cuda(args.rank),), verbose=False)
     criterion = YoloLoss(grid_size=model.grid_size, label_smoothing=args.label_smoothing)
     optimizer = optim.SGD(model.parameters(), lr=args.base_lr, momentum=args.momentum, weight_decay=args.weight_decay)
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_decay, gamma=0.1)
-    evaluator = Evaluator(annotation_file=args.mAP_file_path)
+    evaluator = Evaluator(annotation_file=args.mAP_filepath)
     scaler = amp.GradScaler(enabled=not args.no_amp)
     ema = ModelEMA(model=model) if args.rank == 0 else None
 
@@ -202,6 +204,7 @@ def main_work(rank, world_size, args, logger):
     for epoch in progress_bar:
         if args.rank == 0:
             train_loader = tqdm(train_loader, desc=f"[TRAIN:{epoch:03d}/{args.num_epochs:03d}]", ncols=115, leave=False)
+
         train_sampler.set_epoch(epoch)
         train_loss_str = train(args=args, dataloader=train_loader, model=model, ema=ema, criterion=criterion, optimizer=optimizer, scaler=scaler)
 
@@ -228,6 +231,7 @@ def main_work(rank, world_size, args, logger):
                     result_analyis(args=args, mAP_dict=mAP_dict["all"])
                     best_epoch, best_score, best_mAP_str = epoch, ap50, eval_text
                     torch.save(save_opt, args.weight_dir / "best.pt")
+
         scheduler.step()
 
     if mAP_dict and args.rank == 0:

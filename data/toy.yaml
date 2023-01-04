@@ -5,7 +5,7 @@ TRAIN:
 VAL: 
  - images/train_2
 
-MAP_FILE_NAME: toy_dataset_val.json
+VAL_FILE: toy_dataset-val.json
 
 CLASS_INFO: {
   0: 'dog'

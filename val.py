@@ -19,21 +19,21 @@ torch.manual_seed(SEED)
 
 from dataloader import Dataset, BasicTransform, to_image
 from model import YoloModel
-from utils import Evaluator, build_basic_logger, generate_random_color, transform_xcycwh_to_x1y1x2y2, \
-                  filter_confidence, run_NMS, scale_coords, transform_x1y1x2y2_to_x1y1wh, \
-                  visualize_prediction, imwrite, analyse_mAP_info
+from utils import (Evaluator, build_basic_logger, generate_random_color, transform_xcycwh_to_x1y1x2y2,
+                  filter_confidence, run_NMS, scale_coords, transform_x1y1x2y2_to_x1y1wh, 
+                  visualize_prediction, imwrite, analyse_mAP_info)
 
 
 
 @torch.no_grad()
 def validate(args, dataloader, model, evaluator, epoch=0, save_result=False):
     model.eval()
-    with open(args.mAP_file_path, mode="r") as f:
-        mAP_json = json.load(f)
+    with open(args.mAP_filepath, mode="r") as f:
+        json_file = json.load(f)
 
     cocoPred = []
     check_images, check_preds, check_results = [], [], []
-    imageToid = mAP_json["imageToid"]
+    imageToid = json_file["imageToid"]
 
     for _, minibatch in enumerate(dataloader):
         filenames, images, shapes = minibatch[0], minibatch[1], minibatch[3]
@@ -69,7 +69,7 @@ def validate(args, dataloader, model, evaluator, epoch=0, save_result=False):
             check_result = visualize_prediction(image=check_image, prediction=check_pred, class_list=args.class_list, color_list=args.color_list)
             check_results.append(check_result)
         concat_result = np.concatenate(check_results, axis=1)
-        imwrite(str(args.img_log_dir / f"EP_{epoch:03d}.jpg"), concat_result)
+        imwrite(str(args.img_log_dir / f"EP-{epoch:03d}.jpg"), concat_result)
 
     if len(cocoPred) > 0:
         cocoPred = np.concatenate(cocoPred, axis=0)
@@ -85,10 +85,10 @@ def validate(args, dataloader, model, evaluator, epoch=0, save_result=False):
 def result_analyis(args, mAP_dict):
     analysis_result = analyse_mAP_info(mAP_dict, args.class_list)
     data_df, figure_AP, figure_dets, fig_PR_curves = analysis_result
-    data_df.to_csv(str(args.exp_path / f"result_AP.csv"))
-    figure_AP.savefig(str(args.exp_path / f"figure_AP.jpg"))
-    figure_dets.savefig(str(args.exp_path / f"figure_dets.jpg"))
-    PR_curve_dir = args.exp_path / "PR_curve" 
+    data_df.to_csv(str(args.exp_path / f"result-AP.csv"))
+    figure_AP.savefig(str(args.exp_path / f"figure-AP.jpg"))
+    figure_dets.savefig(str(args.exp_path / f"figure-dets.jpg"))
+    PR_curve_dir = args.exp_path / "PR-curve" 
     os.makedirs(PR_curve_dir, exist_ok=True)
     for class_id in fig_PR_curves.keys():
         fig_PR_curves[class_id].savefig(str(PR_curve_dir / f"{args.class_list[class_id]}.jpg"))
@@ -113,7 +113,7 @@ def parse_args(make_dirs=True):
     args.data = ROOT / "data" / args.data
     args.exp_path = ROOT / "experiment" / args.exp
     args.ckpt_path = args.exp_path / "weight" / args.ckpt_name
-    args.img_log_dir = args.exp_path / "val_image"
+    args.img_log_dir = args.exp_path / "val-image"
     
     if make_dirs:
         os.makedirs(args.img_log_dir, exist_ok=True)

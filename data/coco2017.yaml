@@ -5,7 +5,7 @@ TRAIN:
 VAL: 
  - images/val
 
-MAP_FILE_NAME: coco2017_val.json
+VAL_FILE: coco2017-val.json
 
 CLASS_INFO: {
   0: 'person',
