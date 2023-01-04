@@ -4,7 +4,6 @@ import torch
 def resume_state(ckpt_path, rank, model, ema, optimizer, scheduler, scaler):
     ckpt = torch.load(ckpt_path, map_location="cpu")
     start_epoch = ckpt["running_epoch"] + 1
-    
     model.load_state_dict(ckpt["model_state"], strict=True)
     optimizer.load_state_dict(ckpt["optimizer_state"])
     for state in optimizer.state.values():
