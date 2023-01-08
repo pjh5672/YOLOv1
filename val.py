@@ -133,11 +133,11 @@ def main():
     ckpt = torch.load(args.ckpt_path, map_location = {"cpu":"cuda:%d" %args.rank})
     args.class_list = ckpt["class_list"]
     args.color_list = generate_random_color(len(args.class_list))
-    args.mAP_file_path = val_dataset.mAP_file_path
+    args.mAP_filepath = val_dataset.mAP_filepath
 
     model = YoloModel(input_size=args.img_size, backbone=ckpt["backbone"], num_classes=len(args.class_list)).cuda(args.rank)
     model.load_state_dict(ckpt["ema_state" if ckpt.get("ema_state") else "model_state"], strict=True)
-    evaluator = Evaluator(annotation_file=args.mAP_file_path)
+    evaluator = Evaluator(annotation_file=args.mAP_filepath)
 
     if (args.exp_path / "predictions.txt").is_file():
         cocoPred = np.loadtxt(args.exp_path / "predictions.txt", delimiter = ",", skiprows=1)
