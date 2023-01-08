@@ -40,7 +40,8 @@ class YoloModel(nn.Module):
         
         if pretrained:
             download_path = ROOT / "weights" / f"yolov1-{backbone}.pt"
-            gdown.download(model_urls[f"yolov1-{backbone}"], str(download_path), quiet=False, fuzzy=True)
+            if not download_path.is_file():
+                gdown.download(model_urls[f"yolov1-{backbone}"], str(download_path), quiet=False, fuzzy=True)
             ckpt = torch.load(download_path, map_location="cpu")
             self.load_state_dict(ckpt["model_state"], strict=False)
 
