@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 
+import gdown
 import torch
 from torch import nn
 
@@ -14,6 +15,14 @@ if str(ROOT) not in sys.path:
 
 from utils import set_grid
 
+
+model_urls = {
+    "yolov1-vgg16": "https://drive.google.com/file/d/1yIEFsSXlsOeJVAnt164NBGmZPg8J_ZRm/view?usp=share_link",
+    "yolov1-vgg16-bn": "https://drive.google.com/file/d/1NSHsPiJc3EVAo8SQX2HqSpCK3iQVocNa/view?usp=share_link",
+    "yolov1-resnet18": "https://drive.google.com/file/d/1EETZU5z4c1lff3zOBk6jHFwBsORd065X/view?usp=share_link",
+    "yolov1-resnet34": "https://drive.google.com/file/d/1-AAAFd8ADxquma5u36mOHB9eBM514RzI/view?usp=share_link",
+    "yolov1-resnet50": "https://drive.google.com/file/d/1oc8dNiQGImQFy2aXmU7NlupL_13vvib4/view?usp=share_link",
+}
 
 
 class YoloModel(nn.Module):
@@ -30,7 +39,9 @@ class YoloModel(nn.Module):
         self.grid_y = grid_y.contiguous().view((1, -1))
         
         if pretrained:
-            ckpt = torch.load(ROOT / "weights" / f"yolov1-{backbone}.pt", map_location="cpu")
+            download_path = ROOT / "weights" / f"yolov1-{backbone}.pt"
+            gdown.download(model_urls[f"yolov1-{backbone}"], str(download_path), quiet=False, fuzzy=True)
+            ckpt = torch.load(download_path, map_location="cpu")
             self.load_state_dict(ckpt["model_state"], strict=False)
 
 
