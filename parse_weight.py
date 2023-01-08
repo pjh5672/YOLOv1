@@ -29,5 +29,5 @@ if __name__ == "__main__":
         if not key.startswith("head"):
             parsed_model_state[key] = val
     
-    torch.save({"model_state": parsed_model_state}, f"./{args.exp}.pt")
+    torch.save({"model_state": parsed_model_state}, f"./yolov1-{args.exp}.pt")
     

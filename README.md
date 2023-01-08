@@ -24,20 +24,20 @@ In addition, we provide model weights that trained on the VOC dataset, so you ca
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | 
 | YOLOv1<br><sup>(<u>Paper:page_with_curl:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | *not reported* | 63.4 | *not reported* | 40.16 |
 | YOLOv1 VGG16<br><sup>(<u>Paper:page_with_curl:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | *not reported* | 66.4 | *not reported* | *not reported* |
-| YOLOv1 VGG16<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 33.7 | 66.1 | 25.49 | 127.00 |
-| YOLOv1 VGG16-BN<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 35.2 | 67.9 | 25.49 | 127.43 |
-| YOLOv1 Resnet18<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 39.8 | 69.1 | 21.95 | 18.81 |
-| YOLOv1 Resnet34<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 45.5 | 73.7 | 32.06 | 29.01 |
-| YOLOv1 Resnet50<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 44.3 | 74.7 | 35.06 | 37.58 |
+| YOLOv1 VGG16<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 34.9 | 67.2 | 25.49 | 127.00 |
+| YOLOv1 VGG16-BN<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 36.9 | 69.4 | 25.49 | 127.43 |
+| YOLOv1 Resnet18<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 38.8 | 68.6 | 21.95 | 18.81 |
+| YOLOv1 Resnet34<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 43.2 | 72.6 | 32.06 | 29.01 |
+| YOLOv1 Resnet50<br><sup>(<u>Our:star:</u>)</br> | PASCAL-VOC | trainval2007+2012 | test2007 | 448 | 43.0 | 73.5 | 35.06 | 37.58 |
 
 
  - **Pretrained Model Weights Download**
 
-	- [YOLOv1 VGG16](https://drive.google.com/file/d/1Lqfya69RJvCFQCPR797J_Sf1NYJ8s0PJ/view?usp=share_link)
-	- [YOLOv1 VGG16-BN](https://drive.google.com/file/d/1cjNsdLymtUdDLaBM7F1SsGXHhJZsf5pJ/view?usp=share_link)
-	- [YOLOv1 ResNet18](https://drive.google.com/file/d/1evjGazX23bA_Mg6G6mxE5Rb11D7659Xd/view?usp=share_link)
-	- [YOLOv1 ResNet34](https://drive.google.com/file/d/1y4AzHZpZEWQI4jjDwqSqvtIEIRznA9aB/view?usp=share_link)
-	- [YOLOv1 ResNet50](https://drive.google.com/file/d/1Gpp206gR6xjerDrAFEwjqWFcUxOqtbaD/view?usp=share_link)
+	- [YOLOv1 VGG16](https://drive.google.com/file/d/1yIEFsSXlsOeJVAnt164NBGmZPg8J_ZRm/view?usp=share_link)
+	- [YOLOv1 VGG16-BN](https://drive.google.com/file/d/1NSHsPiJc3EVAo8SQX2HqSpCK3iQVocNa/view?usp=share_link)
+	- [YOLOv1 ResNet18](https://drive.google.com/file/d/1EETZU5z4c1lff3zOBk6jHFwBsORd065X/view?usp=share_link)
+	- [YOLOv1 ResNet34](https://drive.google.com/file/d/1-AAAFd8ADxquma5u36mOHB9eBM514RzI/view?usp=share_link)
+	- [YOLOv1 ResNet50](https://drive.google.com/file/d/1oc8dNiQGImQFy2aXmU7NlupL_13vvib4/view?usp=share_link)
 
 
 
