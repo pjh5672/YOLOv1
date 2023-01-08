@@ -26,7 +26,6 @@ class Dataset:
             
         self.phase = phase
         self.class_list = data_item["CLASS_INFO"]
-        self.anchors = data_item['ANCHORS'] if "ANCHORS" in data_item else None
         
         self.image_paths = []
         for sub_dir in data_item[self.phase.upper()]:
