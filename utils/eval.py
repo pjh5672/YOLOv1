@@ -17,8 +17,6 @@ class Evaluator():
         
         with open(annotation_file, "r") as f:
             val_anno = json.load(f)
-
-        self.imageToshape = {k["id"]:(k["width"],k["height"]) for k in val_anno["images"]}
         self.groundtruths = self.split_areaRng(data=val_anno["annotations"])
         self.areaToann = {}
         for areaLbl in self.areaRngLbl:
@@ -85,7 +83,7 @@ class Evaluator():
                 mAP_50 += res["AP_50"]
                 mAP_75 += res["AP_75"]
                 mAP_5095 += res["AP_5095"]
-
+                
         mAP_50 /= valid_num_classes
         mAP_75 /= valid_num_classes
         mAP_5095 /= valid_num_classes
@@ -134,13 +132,10 @@ class Evaluator():
         for i in range(len(pred_for_cls_id)):
             pred = pred_for_cls_id[i]
             ann = imgToann[pred["image_id"]]
-            shape = self.imageToshape[pred["image_id"]] * 2
 
             iou_max = 0
             for j in range(len(ann)):
-                pred_box = np.array(pred["bbox"]) / shape
-                gt_box = np.array(ann[j]["bbox"]) / shape
-                iou = self.get_IoU(pred_box, gt_box)
+                iou = self.get_IoU(pred["bbox"], ann[j]["bbox"])
                 if iou > iou_max:
                     iou_max = iou
                     jmax = j
