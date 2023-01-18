@@ -158,7 +158,6 @@ class Evaluator():
         APs = []
         for i in range(len(self.iouThrs)):
             ap, mprec, mrec = self.EveryPointInterpolation(rec[i], prec[i])
-            # ap, mprec, mrec = self.ElevenPointInterpolatedAP(rec[i], prec[i])
             if i == 0:
                 mprec_50 = mprec
                 mrec_50 = mrec
