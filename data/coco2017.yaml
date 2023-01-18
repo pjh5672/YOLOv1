@@ -1,4 +1,4 @@
-PATH: /media/jhpark/STORE/DATASET/MS-COCO/coco2017
+PATH: /STORE/DATASET/MS-COCO/coco2017
 
 TRAIN: 
  - images/train

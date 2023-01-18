@@ -1,4 +1,4 @@
-PATH: /media/jhpark/STORE/DATASET/PASCAL-VOC
+PATH: /STORE/DATASET/PASCAL-VOC
 
 TRAIN: 
  - images/train2007

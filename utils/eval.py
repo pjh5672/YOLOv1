@@ -157,7 +157,8 @@ class Evaluator():
 
         APs = []
         for i in range(len(self.iouThrs)):
-            ap, mprec, mrec = self.ElevenPointInterpolatedAP(rec[i], prec[i])
+            ap, mprec, mrec = self.EveryPointInterpolation(rec[i], prec[i])
+            # ap, mprec, mrec = self.ElevenPointInterpolatedAP(rec[i], prec[i])
             if i == 0:
                 mprec_50 = mprec
                 mrec_50 = mrec
@@ -181,7 +182,6 @@ class Evaluator():
     def ElevenPointInterpolatedAP(self, rec, prec):
         mrec = [e for e in rec]
         mpre = [e for e in prec]
-
         recallValues = np.linspace(0, 1, 11)
         recallValues = list(recallValues[::-1])
         rhoInterp = []
@@ -221,6 +221,27 @@ class Evaluator():
         recallValues = [i[0] for i in cc]
         rhoInterp = [i[1] for i in cc]
         return ap, rhoInterp, recallValues
+
+
+    def EveryPointInterpolation(self, rec, prec):
+        mrec = []
+        mrec.append(0)
+        [mrec.append(e) for e in rec]
+        mrec.append(1)
+        mpre = []
+        mpre.append(0)
+        [mpre.append(e) for e in prec]
+        mpre.append(0)
+        for i in range(len(mpre) - 1, 0, -1):
+            mpre[i - 1] = max(mpre[i - 1], mpre[i])
+        ii = []
+        for i in range(len(mrec) - 1):
+            if mrec[1+i] != mrec[i]:
+                ii.append(i + 1)
+        ap = 0
+        for i in ii:
+            ap = ap + np.sum((mrec[i] - mrec[i - 1]) * mpre[i])
+        return ap, mpre[0:len(mpre) - 1], mrec[0:len(mpre) - 1]
 
 
     def transform_prediction_eval_format(self, data):
